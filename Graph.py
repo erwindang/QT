@@ -27,7 +27,9 @@ class MainWindow(QMainWindow):
         self.canvas = MplCanvas(self, width=5, height=4, dpi=100)
         layout.addWidget(self.canvas)
         
+        #
         # Create input field sub-layout
+        #
         input_layout = QHBoxLayout()
 
         self.x_label = QLabel("x:")
@@ -35,6 +37,7 @@ class MainWindow(QMainWindow):
 
         self.marker_x_input = QLineEdit("3")  # Default value
         input_layout.addWidget(self.marker_x_input)
+        
          # Connect the returnPressed signal to update_graph method
         self.marker_x_input.returnPressed.connect(self.update_graph)
         input_layout.addWidget(self.marker_x_input)
@@ -51,7 +54,6 @@ class MainWindow(QMainWindow):
         # Initialize graph
         self.marker_x = 3 # float(self.marker_x_input.text())
         self.plot_graph()
-
 
     def update_graph(self):
             try:
@@ -79,35 +81,40 @@ class MainWindow(QMainWindow):
         else:
             marker_x_graph = self.marker_x
 
-        #
-        #  My code
-        #
-        # line.user_pts.x
-        # line.user_pts.y
-        # line.profile.x
-        # line.profile.y
-        # rider.ride.x
-        # rider.ride.y
-        # rider.ride.speed.x
-        # rider.ride.speed.y
-        # rider.ride.speed.magn
-        # rider.ride.acc.x
-        # rider.ride.acc.y
-
         # Clear the previous plot
         self.canvas.axes.clear()
         
-        # Plot the data
+        # Text for displaying coordinates
+        self.coord_text = self.canvas.axes.text(0.05, 0.95, '', transform=self.canvas.axes.transAxes, bbox=dict(facecolor='white', alpha=0.8))
+        self.coord_text.set_text('x= y=')
+
+        # Connect mouse events
+        self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
+        #self.canvas.mpl_connect('button_press_event', self.on_mouse_click)
+
+        # Plot the line
         self.canvas.axes.plot(x, y, 'r-')
-        self.canvas.axes.plot(x[marker_x_graph], y[marker_x_graph], 'bo')
+        
+        # Plot dot marker at the specified x position
+        self.canvas.axes.plot(x[marker_x_graph], y[marker_x_graph] , 'bo', markersize=5, label=f'Point at x={x[marker_x_graph]:.2f}')
+        
+        # Add a vertical line to highlight the x position
+        self.canvas.axes.axvline(x=x[marker_x_graph], color='b', linestyle='-', linewidth=1, alpha=0.5)
+        self.canvas.axes.axhline(y=y[marker_x_graph], color='b', linestyle='-', linewidth=1, alpha=0.5)
+        
+        # Add labels
         self.canvas.axes.set_title('Basic X-Y Graph')
         self.canvas.axes.set_xlabel('X axis')
         self.canvas.axes.set_ylabel('Y axis')
         self.canvas.axes.grid(True)  
 
-    # Redraw the canvas
+        # Redraw the canvas
         self.canvas.draw()
 
+    def on_mouse_move(self, event):
+        if event.inaxes:
+            self.coord_text.set_text(f'x = {event.xdata:.4f}, y = {event.ydata:.4f}')
+            self.canvas.draw_idle()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
