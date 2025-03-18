@@ -42,8 +42,10 @@ class line():
         plt.grid(True)
         plt.show()
 
-
 if __name__ == "__main__":
     all_points = line (segments)
+    # print(all_points.user_points)
+    for point in all_points.user_points:
+        print(point)
     all_points.plot()
     sys.exit(False)
