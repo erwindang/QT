@@ -1,131 +1,61 @@
 import sys
 import numpy as np
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QWidget, 
-                             QLineEdit, QHBoxLayout, QLabel, QMessageBox)
-from PyQt5.QtGui import QDoubleValidator
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from PyQt5 import QtWidgets
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
+from scipy.interpolate import interp1d
 
-class MplCanvas(FigureCanvas):
+class MouseTrackingCanvas(FigureCanvasQTAgg):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
-        super(MplCanvas, self).__init__(fig)
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        super().__init__(self.fig)
+        self.ax = self.fig.add_subplot(111)
+        
+        # Sample plot data
+        self.x_data = np.linspace(0, 10, 100)
+        self.y_data = np.sin(self.x_data)
+        self.ax.plot(self.x_data, self.y_data, 'b-')
+        
+        # Initialize marker
+        self.marker, = self.ax.plot([], [], 'ro', markersize=8, label='Marker')
+        
+        # Interpolation function for y-values
+        self.interp_func = interp1d(self.x_data, self.y_data, kind='linear')
+        
+        # Connect mouse motion event
+        self.mpl_connect('motion_notify_event', self._update_marker)
 
-class MainWindow(QMainWindow):
+    def _update_marker(self, event):
+        if event.inaxes == self.ax:
+            x_mouse = event.xdata  # Mouse x-coordinate
+            y_plot = self.interp_func(x_mouse)  # Compute y-value from plot
+            
+            # Update marker position
+            self.marker.set_data([x_mouse], [y_plot])
+            self.fig.canvas.draw_idle()
+
+class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super().__init__()
+        self.setWindowTitle("Mouse Tracking with Plot Y-Value")
         
-        self.setWindowTitle("Sine Wave with X-Position Marker")
-        self.setGeometry(100, 100, 800, 600)
+        # Create plot canvas
+        self.canvas = MouseTrackingCanvas(self)
         
-        # Create the main widget and layout
-        main_widget = QWidget()
-        main_layout = QVBoxLayout(main_widget)
+        # Add navigation toolbar
+        toolbar = NavigationToolbar2QT(self.canvas, self)
         
-        # Create input layout
-        input_layout = QHBoxLayout()
+        # Setup layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(toolbar)
+        layout.addWidget(self.canvas)
         
-        # Add x-position input field
-        self.x_pos_label = QLabel("X Position (0-10) [Press Enter to update]:")
-        input_layout.addWidget(self.x_pos_label)
-        
-        self.x_pos_input = QLineEdit("5.0")  # Default value
-        self.x_pos_input.setPlaceholderText("Enter X position")
-        
-        # Set validator to restrict range from 0 to 10
-        self.x_pos_input.setValidator(QDoubleValidator(0, 10, 2))
-        
-        # Connect the returnPressed signal to update_graph method
-        self.x_pos_input.returnPressed.connect(self.update_graph)
-        input_layout.addWidget(self.x_pos_input)
-        
-        # Add the input layout to the main layout
-        main_layout.addLayout(input_layout)
-        
-        # Create the canvas
-        self.canvas = MplCanvas(self, width=5, height=4, dpi=100)
-        main_layout.addWidget(self.canvas)
-        
-        # Set the central widget
-        self.setCentralWidget(main_widget)
-        
-        # Initial values
-        self.x_position = 5.0
-        self.amplitude = 1.0  # Fixed amplitude for the sine wave
-        self.plot_graph()
-    
-    def plot_graph(self):
-        # Clear the previous plot
-        self.canvas.axes.clear()
-        
-        # Create data for the sine wave
-        x = np.linspace(0, 10, 100)
-        y = self.amplitude * np.sin(x)
-        
-        # Plot the sine wave
-        self.canvas.axes.plot(x, y, 'b-', label='sin(x)')
-        
-        # Calculate the y value at the specified x position
-        y_at_x = self.amplitude * np.sin(self.x_position)
-        
-        # Add a dot marker at the specified x position
-        self.canvas.axes.plot(self.x_position, y_at_x, 'ro', markersize=10, 
-                              label=f'Point at x={self.x_position:.2f}')
-        
-        # Add a vertical line to highlight the x position
-        self.canvas.axes.axvline(x=self.x_position, color='r', linestyle='--', alpha=0.5)
-        
-        # Set titles and labels
-        self.canvas.axes.set_title(f'Sine Wave with Marker at x = {self.x_position:.2f}')
-        self.canvas.axes.set_xlabel('X axis')
-        self.canvas.axes.set_ylabel('Y axis')
-        
-        # Set x and y axis limits
-        self.canvas.axes.set_xlim(0, 10)
-        self.canvas.axes.set_ylim(-1.5, 1.5)
-        
-        # Add grid and legend
-        self.canvas.axes.grid(True)
-        self.canvas.axes.legend()
-        
-        # Show the coordinates of the marked point
-        self.canvas.axes.annotate(f'({self.x_position:.2f}, {y_at_x:.2f})', 
-                                 (self.x_position, y_at_x),
-                                 xytext=(5, 10), textcoords='offset points',
-                                 ha='center')
-        
-        # Redraw the canvas
-        self.canvas.draw()
-    
-    def update_graph(self):
-        try:
-            # Get the x position from the input field
-            x_pos_text = self.x_pos_input.text()
-            
-            # If empty, set to default
-            if not x_pos_text:
-                self.x_position = 5.0
-            else:
-                # Convert to float and ensure it's within the valid range
-                new_x_position = float(x_pos_text)
-                if 0 <= new_x_position <= 10:
-                    self.x_position = new_x_position
-                else:
-                    QMessageBox.warning(self, "Invalid Input", 
-                                      "X position must be between 0 and 10.")
-                    return
-            
-            # Update the graph
-            self.plot_graph()
-            
-        except ValueError:
-            # Show error message if input is not a valid float
-            QMessageBox.warning(self, "Invalid Input", 
-                               "Please enter a valid number for the X position.")
+        container = QtWidgets.QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())

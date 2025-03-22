@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
 from PyQt5.QtGui import QIntValidator
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from scipy.interpolate import interp1d
 
 class MplCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
@@ -38,11 +39,11 @@ class MainWindow(QMainWindow):
         self.marker_x_input = QLineEdit("3")  # Default value
         input_layout.addWidget(self.marker_x_input)
         
-         # Connect the returnPressed signal to update_graph method
+        # Connect the returnPressed signal to update_graph method
         self.marker_x_input.returnPressed.connect(self.update_graph)
         input_layout.addWidget(self.marker_x_input)
 
-        # Set validator to restrict range from 0 to 10
+        # Set validator to restrict range
         self.marker_x_input.setValidator(QIntValidator(0, 99))
 
         # Add the input layout to the main layout
@@ -52,7 +53,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(main_widget)
 
         # Initialize graph
-        self.marker_x = 3 # float(self.marker_x_input.text())
+        self.marker_x = int(self.marker_x_input.text())
         self.plot_graph()
 
     def update_graph(self):
@@ -94,6 +95,7 @@ class MainWindow(QMainWindow):
 
         # Plot the line
         self.canvas.axes.plot(x, y, 'r-')
+
         
         # Plot dot marker at the specified x position
         self.canvas.axes.plot(x[marker_x_graph], y[marker_x_graph] , 'bo', markersize=5, label=f'Point at x={x[marker_x_graph]:.2f}')
