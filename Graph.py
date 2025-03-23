@@ -26,7 +26,7 @@ class MainWindow(QMainWindow):
         self.y=line.y
 
         self.setWindowTitle("Basic X-Y Graph with PyQt")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 1200, 900)
         
         # Create the main widget and layout
         main_widget = QWidget()
@@ -62,14 +62,15 @@ class MainWindow(QMainWindow):
         self.marker, = self.canvas.axes.plot([self.x[-1]], [self.y[-1]], 'ro', markersize=5, label='Marker')
         
         # Add a vertical line to highlight the x position
-        self.v_line = self.canvas.axes.axvline(x=self.x[len(self.x)-1], color='b', linestyle='-', linewidth=1, alpha=0.5)
-        self.h_line = self.canvas.axes.axhline(y=self.y[len(self.y)-1], color='b', linestyle='-', linewidth=1, alpha=0.5)
+        self.v_line = self.canvas.axes.axvline(x=self.x[len(self.x)-1], color='b', linestyle='--', linewidth=1, alpha=0.5)
+        self.h_line = self.canvas.axes.axhline(y=self.y[len(self.y)-1], color='b', linestyle='--', linewidth=1, alpha=0.5)
         
         # Add labels
         self.canvas.axes.set_title('Basic X-Y Graph')
         self.canvas.axes.set_xlabel('X axis')
         self.canvas.axes.set_ylabel('Y axis')
         self.canvas.axes.grid(True)  
+        self.canvas.axes.axis ('equal')
 
         # Redraw the canvas
         self.canvas.draw()

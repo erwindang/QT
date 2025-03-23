@@ -2,6 +2,7 @@ import sys
 from math import pi, cos, sin  
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.interpolate import make_interp_spline
 
 segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
 resolution_x = 0.02 #meters
@@ -47,9 +48,15 @@ class Line():
             self.user_x.append(current_x)
             self.user_y.append(current_y)
 
+        # Create B-spline
+        # spl = make_interp_spline(self.x, self.y, k=3)
+        # self.y_smooth = spl(self.x)
+
+
     def plot(self):
-        plt.plot(self.user_x, self.user_y, 'bo')
+        plt.plot(self.user_x, self.user_y, 'b+')
         plt.plot(self.x, self.y, 'r-')
+        # plt.plot(self.x, self.y_smooth, 'g-')
         plt.xlabel('X')
         plt.ylabel('Y')
         plt.title('Points générés à partir des segments')
