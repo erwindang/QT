@@ -2,10 +2,9 @@
 import sys
 import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QLineEdit, QMessageBox
-from PyQt5.QtGui import QIntValidator
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from scipy.interpolate import interp1d
+from line import Line
 
 class MplCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
@@ -18,8 +17,13 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         
         # Create some sample data
-        self.x = np.linspace(0, 10, 100)
-        self.y = np.sin(self.x)
+        # self.x = np.linspace(0, 10, 100)
+        # self.y = np.sin(self.x)
+
+        # Compute line
+        line = Line()
+        self.x=line.x
+        self.y=line.y
 
         self.setWindowTitle("Basic X-Y Graph with PyQt")
         self.setGeometry(100, 100, 800, 600)
@@ -51,17 +55,11 @@ class MainWindow(QMainWindow):
         self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
         #self.canvas.mpl_connect('button_press_event', self.on_mouse_click)
 
-        # Interpolation function for y
-        self.interp_func = interp1d(self.x, self.y, kind='linear')
-
         # Plot the line
         self.canvas.axes.plot(self.x, self.y, 'r-')
 
         # Initialize marker
-        self.marker, = self.canvas.axes.plot([max(self.x)], [self.interp_func(max(self.x))], 'ro', markersize=5, label='Marker')
-
-        # Plot dot marker at the specified x position
-        # self.canvas.axes.plot(marker_x_graph, self.interp_func , 'bo', markersize=5, label=f'Point at x={x[marker_x_graph]:.2f}')
+        self.marker, = self.canvas.axes.plot([self.x[-1]], [self.y[-1]], 'ro', markersize=5, label='Marker')
         
         # Add a vertical line to highlight the x position
         self.v_line = self.canvas.axes.axvline(x=self.x[len(self.x)-1], color='b', linestyle='-', linewidth=1, alpha=0.5)
@@ -82,7 +80,8 @@ class MainWindow(QMainWindow):
             if event.xdata < max(self.x) and event.xdata > min(self.x):         
                 # Update marker
                 x_mouse = event.xdata  # Mouse x-coordinate
-                y_plot = self.interp_func(x_mouse)  # Compute y-value from plot
+                #y_plot = self.interp_func(x_mouse)  # Compute y-value from plot
+                y_plot = np.interp(x_mouse, self.x, self.y)
                 self.marker.set_data([x_mouse], [y_plot])
                 
                 # Update marker lines
@@ -92,8 +91,7 @@ class MainWindow(QMainWindow):
                 # Update text box coordinates
                 self.coord_text.set_text(f'x = {x_mouse:.4f}, y = {y_plot:.4f}')
 
-                #self.canvas.draw_idle()
-                self.canvas.draw()
+                self.canvas.draw_idle()
 
 
 if __name__ == "__main__":
