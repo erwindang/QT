@@ -17,6 +17,10 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         
+        # Create some sample data
+        self.x = np.linspace(0, 10, 100)
+        self.y = np.sin(self.x)
+
         self.setWindowTitle("Basic X-Y Graph with PyQt")
         self.setGeometry(100, 100, 800, 600)
         
@@ -28,59 +32,13 @@ class MainWindow(QMainWindow):
         self.canvas = MplCanvas(self, width=5, height=4, dpi=100)
         layout.addWidget(self.canvas)
         
-        #
-        # Create input field sub-layout
-        #
-        input_layout = QHBoxLayout()
-
-        self.x_label = QLabel("x:")
-        input_layout.addWidget(self.x_label)
-
-        self.marker_x_input = QLineEdit("3")  # Default value
-        input_layout.addWidget(self.marker_x_input)
-        
-        # Connect the returnPressed signal to update_graph method
-        self.marker_x_input.returnPressed.connect(self.update_graph)
-        input_layout.addWidget(self.marker_x_input)
-
-        # Set validator to restrict range
-        self.marker_x_input.setValidator(QIntValidator(0, 99))
-
-        # Add the input layout to the main layout
-        layout.addLayout(input_layout)
-
         # Set the central widget
         self.setCentralWidget(main_widget)
 
         # Initialize graph
-        self.marker_x = int(self.marker_x_input.text())
         self.plot_graph()
 
-    def update_graph(self):
-            try:
-                # Get the marker x value from the input field
-                marker_x_text = self.marker_x_input.text()
-                self.marker_x = int(marker_x_text)
-                
-                # Update the graph
-                self.plot_graph()
-                
-            except ValueError:
-                # Show error message if input is not a valid float
-                QMessageBox.warning(self, "Invalid Input", 
-                                "Please enter a valid number for the amplitude.")
-
     def plot_graph(self):
-   
-        # Create some sample data
-        x = np.linspace(0, 10, 100)
-        y = np.sin(x)
-
-        # Limit marker position
-        if (self.marker_x > len(x)-1) : 
-            marker_x_graph = len(x)-1
-        else:
-            marker_x_graph = self.marker_x
 
         # Clear the previous plot
         self.canvas.axes.clear()
@@ -93,16 +51,21 @@ class MainWindow(QMainWindow):
         self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
         #self.canvas.mpl_connect('button_press_event', self.on_mouse_click)
 
-        # Plot the line
-        self.canvas.axes.plot(x, y, 'r-')
+        # Interpolation function for y
+        self.interp_func = interp1d(self.x, self.y, kind='linear')
 
-        
+        # Plot the line
+        self.canvas.axes.plot(self.x, self.y, 'r-')
+
+        # Initialize marker
+        self.marker, = self.canvas.axes.plot([max(self.x)], [self.interp_func(max(self.x))], 'ro', markersize=5, label='Marker')
+
         # Plot dot marker at the specified x position
-        self.canvas.axes.plot(x[marker_x_graph], y[marker_x_graph] , 'bo', markersize=5, label=f'Point at x={x[marker_x_graph]:.2f}')
+        # self.canvas.axes.plot(marker_x_graph, self.interp_func , 'bo', markersize=5, label=f'Point at x={x[marker_x_graph]:.2f}')
         
         # Add a vertical line to highlight the x position
-        self.canvas.axes.axvline(x=x[marker_x_graph], color='b', linestyle='-', linewidth=1, alpha=0.5)
-        self.canvas.axes.axhline(y=y[marker_x_graph], color='b', linestyle='-', linewidth=1, alpha=0.5)
+        self.v_line = self.canvas.axes.axvline(x=self.x[len(self.x)-1], color='b', linestyle='-', linewidth=1, alpha=0.5)
+        self.h_line = self.canvas.axes.axhline(y=self.y[len(self.y)-1], color='b', linestyle='-', linewidth=1, alpha=0.5)
         
         # Add labels
         self.canvas.axes.set_title('Basic X-Y Graph')
@@ -114,9 +77,24 @@ class MainWindow(QMainWindow):
         self.canvas.draw()
 
     def on_mouse_move(self, event):
+        
         if event.inaxes:
-            self.coord_text.set_text(f'x = {event.xdata:.4f}, y = {event.ydata:.4f}')
-            self.canvas.draw_idle()
+            if event.xdata < max(self.x) and event.xdata > min(self.x):         
+                # Update marker
+                x_mouse = event.xdata  # Mouse x-coordinate
+                y_plot = self.interp_func(x_mouse)  # Compute y-value from plot
+                self.marker.set_data([x_mouse], [y_plot])
+                
+                # Update marker lines
+                self.v_line.set_xdata([x_mouse])
+                self.h_line.set_ydata([y_plot])
+
+                # Update text box coordinates
+                self.coord_text.set_text(f'x = {x_mouse:.4f}, y = {y_plot:.4f}')
+
+                #self.canvas.draw_idle()
+                self.canvas.draw()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
