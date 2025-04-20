@@ -5,7 +5,6 @@ from enum import Enum
 from line import Segment, GroundProfile
 from math import radians, sqrt, cos, sin, tan, atan2, degrees, pow
 
-
 class RideDrag:
     def __init__(self):
         # initialize riding drag values
@@ -89,16 +88,37 @@ class RidePhysics:
         new_position = (segment.end_x, segment.start_y + delta_y)
         
         # Compute new speed
-        # new_speed_x = current_speed.x_value - drag.K_drag_const * current_speed.x_value**2
-        new_speed_x = current_speed.x_value
-        # new_speed_y = - g * dx / current_speed.x_value + current_speed.y_value - drag.K_drag_const * current_speed.y_value**2
-        new_speed_y = - g * dx / current_speed.x_value + current_speed.y_value 
+        new_speed_x = current_speed.x_value - drag.K_drag_const * current_speed.x_value**2
+        # new_speed_x = current_speed.x_value
+        new_speed_y = - g * dx / current_speed.x_value + current_speed.y_value - drag.K_drag_const * current_speed.y_value**2
+        # new_speed_y = - g * dx / current_speed.x_value + current_speed.y_value 
         new_speed = sqrt(pow(new_speed_x,2) + pow(new_speed_y,2))
         new_angle = atan2(new_speed_y, new_speed_x)
         new_speed_vector = SpeedVector(new_speed, degrees(new_angle), current_speed.unit)
         
         return new_speed_vector, new_position
 
+    @staticmethod
+    def compute_landing (current_speed, segment, drag):
+        """
+        Compute the speed while landing on the ground.
+
+        Args:
+            slope (float): Slope of the ground segment.
+            drag (RideDrag): Drag parameters.
+            current_speed (float): Current speed of the rider.
+
+        Returns:
+            float: Updated speed (SpeedVector). 
+            float: Position (x,y) tuple .
+        """
+        g = 9.80665   # gravity m.s-2
+        speed =  sqrt((2*g*(sin(-segment.radian) - drag.Mu_roll_drag*cos(segment.radian))
+                    - drag.K_drag_const*pow(current_speed.value,2))*segment.length 
+                    + pow(current_speed.value,2)) 
+        #speed =  sqrt((2*g*sin(-segment.radian))*segment.length + pow(current_speed.value,2))
+        return SpeedVector(speed, segment.degree, current_speed.unit), (segment.end_x, segment.end_y)
+    
     @staticmethod
     def is_take_off(speed, segment):
         """
@@ -137,7 +157,6 @@ class RideTrajectory:
        
             current_speed = self.speed[-1]
             
-
             if current_speed.value > 0:
                 match self.state:
                     
@@ -174,7 +193,6 @@ class RideTrajectory:
                 self.speed.append(current_speed)
                 self.positions.append((self.line.x[i], self.line.y[i]))
                 self.states.append(self.state)
-
 
 class RideSimulation:
     def __init__(self, line, initial_speed, drag):
