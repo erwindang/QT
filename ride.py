@@ -59,13 +59,13 @@ class RidePhysics:
             float: Updated speed (SpeedVector). 
             float: Acceleration (SpeedVector).
         """
-        g = 9.81   # gravity m.s-2
+        g = 9.80665   # gravity m.s-2
         V2 =  (2*g*(sin(-segment.radian) - drag.Mu_roll_drag*cos(segment.radian))
                     - drag.K_drag_const*pow(current_speed.value,2))*segment.length + pow(current_speed.value,2)
         speed =  sqrt((2*g*(sin(-segment.radian) - drag.Mu_roll_drag*cos(segment.radian))
                     - drag.K_drag_const*pow(current_speed.value,2))*segment.length 
                     + pow(current_speed.value,2)) 
-        return SpeedVector(speed, segment.degree, current_speed.unit)
+        return SpeedVector(speed, segment.degree, current_speed.unit), (segment.end_x, segment.end_y)
     
     @staticmethod
     def compute_jump_trajectory(initial_speed, angle, x_start, x_target):
@@ -115,6 +115,7 @@ class RideTrajectory:
         self.line = line
         self.drag = drag
         self.state = RideState.ROLLING
+        self.states = [RideState.ROLLING]  # Store states
         self.speed = [initial_speed]  # Initial speed (SpeedVector)
         self.positions = [(line.x[0], line.y[0])]  # Initial position
         self.takeoffs = []  # Store take-off points
@@ -131,55 +132,38 @@ class RideTrajectory:
                 self.line.x[i], self.line.y[i]
             )
        
-            self.positions.append((self.line.x[i], self.line.y[i]))
             current_speed = self.speed[-1]
-
-            if RidePhysics.is_take_off(current_speed, current_segment):
-                # Log take-off position
-                self.state = RideState.JUMPING  
-                self.takeoffs.append((self.line.x[i-1], self.line.y[i-1]))
-                # Compute jump trajectory
             
-            if current_speed.value :
-                new_speed = RidePhysics.compute_rolling_speed(current_speed, current_segment, self.drag)
+
+            if current_speed.value > 0:
+                match self.state:
+                    
+                    case RideState.ROLLING:
+                        if RidePhysics.is_take_off(current_speed, current_segment): 
+                            # JUMPING - Log take-off position
+                            self.state = RideState.JUMPING  
+                            self.takeoffs.append((self.line.x[i-1], self.line.y[i-1]))
+                            # Compute jump trajectory
+                            new_speed, new_position = RidePhysics.compute_rolling_speed(current_speed, current_segment, self.drag)
+                        else: #ROLLING
+                            new_speed, new_position = RidePhysics.compute_rolling_speed(current_speed, current_segment, self.drag)
+
+                    case RideState.JUMPING:                       
+                        new_speed, new_position = RidePhysics.compute_rolling_speed(current_speed, current_segment, self.drag) #FIXME
+                        
+                    case _:
+                        new_speed = (current_speed)
+                        new_position = (self.line.x[i-1], self.line.y[i-1])
+                        raise ValueError("Undefined riding state")
+                        
                 self.speed.append(new_speed)
+                self.positions.append(new_position)
+                self.states.append(self.state)
             else: 
                 self.speed.append(current_speed)
+                self.positions.append((self.line.x[i], self.line.y[i]))
+                self.states.append(self.state)
 
-
-            # if self.state == RideState.ROLLING:
-                # # Compute rolling speed
-                # current_speed = self.speed[-1]S
-                # new_speed = RidePhysics.compute_rolling_speed(slope, self.drag, current_speed)
-                # self.speed.append(new_speed)
-
-        #         # Update position
-        #         self.positions.append((self.line.x[i], self.line.y[i]))
-
-        #         # Detect take-off
-        #         if new_speed > 5.0 and slope < -0.2:  # Example condition for take-off
-        #             self.state = RideState.JUMPING
-        #             self.takeoffs.append((self.line.x[i], self.line.y[i]))
-        #             self.jump_start_speed = new_speed
-        #             self.jump_start_time = 0.0
-
-        #     elif self.state == RideState.JUMPING:
-        #         # Compute jump trajectory based on x position
-        #         x_start = self.takeoffs[-1][0]  # Get the x position of the last take-off
-        #         x_target = self.line.x[i]  # Target x position on the ground line
-        #         y = RidePhysics.compute_jump_trajectory(self.jump_start_speed, sgmt.angle, x_start, x_target)
-
-        #         # Update position
-        #         self.positions.append((x_target, y))
-
-        #         # Detect landing
-        #         if y <= self.line.y[i]:  # Check if the rider has landed
-        #             self.state = RideState.LANDING
-        #             self.landings.append((x_target, y))
-
-        #     elif self.state == RideState.LANDING:
-        #         # Transition back to rolling
-        #         self.state = RideState.ROLLING
 
 class RideSimulation:
     def __init__(self, line, initial_speed, drag):
