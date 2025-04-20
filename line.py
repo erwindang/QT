@@ -56,6 +56,11 @@ class GroundProfile:
             self._interpolate_segment(segment)
             current_x, current_y = end_x, end_y
         
+        # Add the last point to the line
+        # self.x.append(current_x)
+        # self.y.append(current_y)    
+    
+        
     def _interpolate_segment(self, segment):
         """
         Interpolate the segment to create points at the specified resolution.       
@@ -97,7 +102,7 @@ class GroundProfile:
 
         plt.figure(figsize=(10, 6))
         if len(self.x) > 50:
-            plt.plot(self.x, self.y, 'r-', linewidth=1, alpha=0.5)
+            plt.plot(self.x, self.y, 'r-', linewidth=1, alpha=0.5) 
             for segment in self.segments:
                 plt.plot([segment.start_x, segment.end_x], [segment.start_y, segment.end_y], 'b+')
         else:
@@ -118,10 +123,12 @@ class GroundProfile:
         return f"GroundProfile: {len(self.segments)} segments, Nb.pts: {len(self.x)} total length={self._line_distance():.2f} m"
 
 if __name__ == "__main__":
-    #my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
-    #my_segments = [(1.0,-20.0), (1.0,-8.0)]
-    my_segments = [(1.0,-4.0)]
-    my_resolution = 0.2 #meters
+    # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
+    my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,0.0), (2.0,-17.0), (1.0,0.0)]
+    # my_segments = [(1.0,-20.0), (1.0,-8.0), (1.0,0.0)]
+    # my_segments = [(1.0,-4.0)]
+    # my_segments = [(1.0, 0.0)]
+    my_resolution = 0.1 #meters
     
     my_line = GroundProfile (my_segments, my_resolution)
     print(my_line)
