@@ -1,33 +1,22 @@
-import sys
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
+# Define the grid
+x = np.arange(0, 5, 1)
+y = np.arange(0, 5, 1)
+X, Y = np.meshgrid(x, y)
 
-class line():
-    def __init__(self):
-        self.x = [0.0, 9.0]
-        self.y = [0.0, 5.0]
-        self.res = 1
-        
-        new_x = np.arange(self.x[0], self.x[-1], self.res)
-        self.new_x = np.append(new_x, self.x[-1])
-        #self.new_x = np.arange(self.x[0], self.x[-1], self.res)
-        self.new_y = np.interp(self.new_x,self.x, self.y)
+# Define the vector components
+U = np.ones_like(X)  # x-component of the vector
+V = np.ones_like(Y)  # y-component of the vector
 
-    def plot(self):
-        plt.plot(self.x, self.y, 'bo', markersize=5)
-        plt.plot(self.new_x, self.new_y, 'r+', markersize=5)
-        plt.show()
+# Create the quiver plot
+plt.quiver(X, Y, U, V, color='blue', scale=1)
 
-    def print_line(self):
-        i=0
-        for x, y in zip(self.new_x, self.new_y):
-            i += 1
-            print(f"{i:02d} x = {x:.2f}, y = {y:.2f}")
-        print(f"len = {len(self.new_x)}")
+# Add labels and title
+plt.title("Quiver Plot Example")
+plt.xlabel("X-axis")
+plt.ylabel("Y-axis")
 
-if __name__ == "__main__":
-    my_line = line()
-    my_line.print_line()
-    my_line.plot()
-    sys.exit(False)
+# Show the plot
+plt.show()

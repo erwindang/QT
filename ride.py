@@ -14,7 +14,7 @@ class RideDrag:
         self.A_surface = 0.5      # rider exposed front surface, in m2 
         self.Cd_air_drag = 0.9     # aerodynamic drag coeficient, no unit
         self.Rho_air_density = 1.22     # air density kg.m-3
-        self.K_drag_const = self.Cd_air_drag * self.A_surface * self.Rho_air_density / self.rider_mass # drag constant, no unit
+        self.K_drag_const = self.Cd_air_drag * self.A_surface * self.Rho_air_density / self.rider_mass # air drag constant, no unit
 
 class RideState(Enum):
     ROLLING = "rolling"
@@ -60,10 +60,10 @@ class RidePhysics:
             float: Position (x,y) tuple .
         """
         g = 9.80665   # gravity m.s-2
-        # speed =  sqrt((2*g*(sin(-segment.radian) - drag.Mu_roll_drag*cos(segment.radian))
-        #             - drag.K_drag_const*pow(current_speed.value,2))*segment.length 
-        #             + pow(current_speed.value,2)) 
-        speed =  sqrt((2*g*sin(-segment.radian))*segment.length + pow(current_speed.value,2))
+        speed =  sqrt((2*g*(sin(-segment.radian) - drag.Mu_roll_drag*cos(segment.radian))
+                    - drag.K_drag_const*pow(current_speed.value,2))*segment.length 
+                    + pow(current_speed.value,2)) 
+        #speed =  sqrt((2*g*sin(-segment.radian))*segment.length + pow(current_speed.value,2))
         return SpeedVector(speed, segment.degree, current_speed.unit), (segment.end_x, segment.end_y)
     
     @staticmethod
@@ -98,13 +98,6 @@ class RidePhysics:
         new_speed_vector = SpeedVector(new_speed, degrees(new_angle), current_speed.unit)
         
         return new_speed_vector, new_position
-    
-    # vx = v0.speed*cos(v0.theta)
-    # vy = -g*dx/vx + v0.speed*sin(v0.theta) 
-    # speed = sqrt(pow(vx,2)+pow(vy,2)) #- airFrictionLoss(k, v0.speed) #Approximate constant air friction along dx segment
-    # unit = v0.unit
-    # theta = atan (vy/vx)
-
 
     @staticmethod
     def is_take_off(speed, segment):
