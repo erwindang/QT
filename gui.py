@@ -82,25 +82,14 @@ class MainWindow(QMainWindow):
         # Plot trajectory
         self.positions = np.array(simulation.trajectory.positions)
         self.canvas.axes1.plot(self.positions[:, 0], self.positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=1, linestyle="None", alpha=0.8)
-       
-        # Initialize marker and marker lines
-        self.marker, = self.canvas.axes1.plot(self.positions[-1, 0], self.positions[-1, 1], 'b+', markersize=20, label='Marker')
-        self.v_line = self.canvas.axes1.axvline(x=self.positions[-1, 0], color='b', linestyle='--', linewidth=1, alpha=0.2)
-        self.h_line = self.canvas.axes1.axhline(y=self.positions[-1, 1], color='b', linestyle='--', linewidth=1, alpha=0.2)
-              
-        # Add labels
-        self.canvas.axes1.set_title('Ride')
+        self.canvas.axes1.set_title('Line')
         # self.canvas.axes1.set_xlabel('m')
         self.canvas.axes1.set_ylabel('(m)')
         self.canvas.axes1.grid(True)  
         self.canvas.axes1.axis ('equal')
         self.canvas.axes1.set_xlim(min(self.x),max(self.x))
         # self.canvas.axes1.set_ylim(min(self.y)*1.2,max(self.y)*2)   
-
-        # Text for displaying coordinates
-        self.coord_text = self.canvas.axes1.text(0.5, 0.9, '', transform=self.canvas.axes1.transAxes, bbox=dict(facecolor='white', alpha=0))
-        self.coord_text.set_text('x= y=')
-
+       
         # Plot speed
         self.speeds = np.array([abs(speed.value) for speed in simulation.trajectory.speed])
         self.canvas.axes2.plot(self.positions[:, 0], self.speeds, label="Speed", color="red", marker='+', markersize=1, linestyle="None")
@@ -112,6 +101,23 @@ class MainWindow(QMainWindow):
         # self.canvas.axes2.set_xlim(min(self.speeds),max(self.speeds[:]))
         # self.canvas.axes2.set_ylim(min(self.speeds),max(self.speeds[:]))       
 
+        # Initialize marker and marker lines
+        self.marker1, = self.canvas.axes1.plot(self.positions[-1, 0], self.positions[-1, 1], 'b+', markersize=20, label='Marker')
+        self.v_line1 = self.canvas.axes1.axvline(x=self.positions[-1, 0], color='b', linestyle='--', linewidth=1, alpha=0.2)
+        self.h_line1 = self.canvas.axes1.axhline(y=self.positions[-1, 1], color='b', linestyle='--', linewidth=1, alpha=0.2)
+
+        self.marker2, = self.canvas.axes2.plot(self.positions[-1, 0], self.positions[-1, 1], 'r+', markersize=20, label='Marker')
+        self.v_line2 = self.canvas.axes2.axvline(x=self.positions[-1, 0], color='r', linestyle='--', linewidth=1, alpha=0.2)
+        self.h_line2 = self.canvas.axes2.axhline(y=self.speeds[-1], color='r', linestyle='--', linewidth=1, alpha=0.2)
+
+        # Text for displaying coordinates
+        self.coord_text = self.canvas.axes1.text(0.5, 0.9, '', transform=self.canvas.axes1.transAxes, bbox=dict(facecolor='white', alpha=0))
+        self.coord_text.set_text(f'x: {self.positions[-1, 0]:.3f}  y: {self.positions[-1, 1]:.3f}')
+
+        # Text for displaying speed
+        self.speed_text = self.canvas.axes2.text(0.5, 0.9, '', transform=self.canvas.axes2.transAxes, bbox=dict(facecolor='white', alpha=0))
+        self.speed_text.set_text(f'{self.speeds[-1]:.3f} (m/s)')
+
         # Redraw the canvas
         self.canvas.draw()
 
@@ -119,30 +125,34 @@ class MainWindow(QMainWindow):
         
         if event.inaxes:
             if event.xdata < max(self.positions[:, 0]) and event.xdata > min(self.positions[:, 0]):         
-                # Update marker
                 x_mouse = event.xdata  # Mouse x-coordinate
-                #y_plot = self.interp_func(x_mouse)  # Compute y-value from plot
-                y_plot = np.interp(x_mouse, self.positions[:, 0], self.positions[:, 1])
-                self.marker.set_data([x_mouse], [y_plot])
-                
-                # Update marker lines
-                self.v_line.set_xdata([x_mouse])
-                self.h_line.set_ydata([y_plot])
 
-                # Update text box coordinates
-                self.coord_text.set_text(f'x = {x_mouse:.4f}, y = {y_plot:.4f}')
+                # Update coord marker
+                y_plot = np.interp(x_mouse, self.positions[:, 0], self.positions[:, 1])
+                self.marker1.set_data([x_mouse], [y_plot])
+                self.v_line1.set_xdata([x_mouse])
+                self.h_line1.set_ydata([y_plot])
+                self.coord_text.set_text(f'x = {x_mouse:.3f}, y = {y_plot:.3f}')
+
+                # Update speed marker
+                y_plot = np.interp(x_mouse, self.positions[:, 0], self.speeds)
+                self.marker2.set_data([x_mouse], [y_plot])
+                self.v_line2.set_xdata([x_mouse])
+                self.h_line2.set_ydata([y_plot])
+                self.speed_text.set_text(f'{y_plot:.3f} (m/s)')
 
                 self.canvas.draw_idle()
 
 
 if __name__ == "__main__":
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
-    my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
+    my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (0.7,-70.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
+    # my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
     # my_segments = [(1.0,-20.0), (1.0,-8.0), (1.0,0.0)]
     # my_segments = [(1.0,-4.0)]
     # my_segments = [(1.0, 0.0)]
     my_resolution = 0.1 #meters
-    start_speed = SpeedVector(6, 0.0, "m/s")  # Initial speed of the rider
+    start_speed = SpeedVector(1, 0.0, "m/s")  # Initial speed of the rider
     drag = RideDrag()
     line = GroundProfile (my_segments, my_resolution) 
     simulation = RideSimulation(line, start_speed, drag)
