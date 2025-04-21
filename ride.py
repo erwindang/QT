@@ -97,7 +97,7 @@ class RidePhysics:
             delta_y = -0.5*g / (take_off.speed.x_value**2) * (dx**2) + tan(take_off.speed.radian) * dx
         except ZeroDivisionError:
             delta_y = 0
-        new_position = (segment.end_x, segment.start_y + delta_y)
+        new_position = (segment.end_x, take_off.y + delta_y)
         
         # Compute new speed
         new_speed_x = take_off.speed.x_value - drag.K_drag_const * take_off.speed.x_value**2
@@ -106,7 +106,7 @@ class RidePhysics:
         # new_speed_y = - g * dx / current_speed.x_value + current_speed.y_value 
         new_speed = sqrt(pow(new_speed_x,2) + pow(new_speed_y,2))
         new_angle = atan2(new_speed_y, new_speed_x)
-        new_speed_vector = SpeedVector(new_speed, degrees(new_angle), current_speed.unit)
+        new_speed_vector = SpeedVector(new_speed, degrees(new_angle), take_off.speed.unit)
         
         return new_speed_vector, new_position
 
@@ -125,10 +125,9 @@ class RidePhysics:
             float: Position (x,y) tuple .
         """
         g = 9.80665   # gravity m.s-2
-        speed =  sqrt((2*g * (sin(-segment.radian) - drag.Mu_roll_drag * cos(segment.radian))
-                    - drag.K_drag_const*pow(current_speed.value,2)) * segment.length 
-                    + pow(current_speed.value,2)) 
-        #speed =  sqrt((2*g*sin(-segment.radian))*segment.length + pow(current_speed.value,2))
+        speed_x = current_speed.x_value - drag.K_drag_const * current_speed.x_value**2
+        speed_y = speed_x * tan(segment.radian)
+        speed = sqrt(pow(speed_x,2) + pow(speed_y,2)) 
         return SpeedVector(speed, segment.degree, current_speed.unit), (segment.end_x, segment.end_y)
     
     @staticmethod
@@ -143,7 +142,7 @@ class RidePhysics:
         Returns:
             bool: True if jumping, False otherwise.
         """
-        return (speed.angle > (segment.angle + 10)) and (speed.value > 5.0)  # sp
+        return (speed.angle > (segment.angle + 10)) and (speed.value > 3.0)  # sp
     
 class RideTrajectory:
     def __init__(self, line, initial_speed, drag):
@@ -190,10 +189,7 @@ class RideTrajectory:
                             # LANDING - Log landing position
                             self.state = RideState.ROLLING
                             self.landings.append((self.line.x[i], self.line.y[i]))
-                            new_position = (self.line.x[i], self.line.y[i]) #FIXME => compute intersection with ground
-                            new_speed_value = sqrt(pow(current_speed.x_value,2) + pow(tan(current_segment.angle) * current_speed.x_value,2)) #FIXME => compute intersection with groun
-                            new_speed = SpeedVector(new_speed_value, current_segment.angle, current_speed.unit)
-                        
+                            new_speed, new_position = RidePhysics.compute_landing(current_speed, current_segment, self.drag)
                     case _:
                         new_speed = (current_speed)
                         new_position = (self.line.x[i-1], self.line.y[i-1])
@@ -227,6 +223,8 @@ class RideSimulation:
         # Create subplots
         fig, axs = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
 
+        # Plot ground profile
+        axs[0].plot(self.trajectory.line.x, self.trajectory.line.y, label="Ground Profile", color="tan")
         # Plot position & take offs (trajectory)
         axs[0].plot(positions[:, 0], positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=1, linestyle="None")
         # axs[0].plot(positions[:, 0], positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=4, linestyle="-")
@@ -257,7 +255,7 @@ class RideSimulation:
 
 if __name__ == "__main__":
     my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
-    # my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,0.0), (2.0,-17.0), (1.0,0.0)]
+    # my_segments = [(0.5,0.0), (0.3,4.0), (0.3,6.0), (0.3,8.0), (0.3,11.0), (0.3,22.0), (0.3,40.0), (0.3,54.0), (1.0,0.0), (2.0,-25.0)]
     # my_segments = [(1.0,-20.0), (1.0,-8.0)]
     # my_segments = [(1.0,-4.0)]
     # my_segments = [(1.0,0.0)]  # 1 meters flat
@@ -267,7 +265,7 @@ if __name__ == "__main__":
 
     drag = RideDrag()
     line = GroundProfile(my_segments, 0.1)  # Create a ground profile with segments and resolution
-    start_speed = SpeedVector(1, 0.0, "m/s")  # Initial speed of the rider
+    start_speed = SpeedVector(0.5, 0.0, "m/s")  # Initial speed of the rider
     simulation = RideSimulation(line, start_speed, drag)
     simulation.run()
     simulation.plot()
