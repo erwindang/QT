@@ -74,7 +74,6 @@ class GroundProfile:
     def _line_distance(self):
         return np.sum(self.segments[i].length for i in range(len(self.segments)))
     
-
     def _add_noise(self, sigma=0.01):
         """
         Add random noise to the interpolated line.

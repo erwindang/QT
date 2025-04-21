@@ -71,10 +71,18 @@ class RidePhysics:
             float: Position (x,y) tuple .
         """
         g = 9.80665   # gravity m.s-2
-        speed =  sqrt((2*g*(sin(-segment.radian) - drag.Mu_roll_drag*cos(segment.radian))
-                    - drag.K_drag_const*pow(current_speed.value,2))*segment.length 
-                    + pow(current_speed.value,2)) 
-        #speed =  sqrt((2*g*sin(-segment.radian))*segment.length + pow(current_speed.value,2))
+        try:
+            
+            speed =  sqrt((2*g*(sin(-segment.radian) - drag.Mu_roll_drag*cos(segment.radian))
+                        - drag.K_drag_const*pow(current_speed.value,2))*segment.length 
+                        + pow(current_speed.value,2)) 
+            #speed =  sqrt((2*g*sin(-segment.radian))*segment.length + pow(current_speed.value,2))
+        except ValueError:
+            val =  (2*g*(sin(-segment.radian) - drag.Mu_roll_drag*cos(segment.radian)) 
+                    - drag.K_drag_const*pow(current_speed.value,2))*segment.length + pow(current_speed.value,2) 
+            print (f"compute_rolling speed error: negative value {val} for segment {segment}")
+            speed = 0.0
+
         return SpeedVector(speed, segment.degree, current_speed.unit), (segment.end_x, segment.end_y)
     
     @staticmethod
@@ -246,12 +254,15 @@ class RideSimulation:
         axs[1].legend()
         axs[1].grid(True)
 
-        # plt.scatter(*zip(*self.trajectory.landings), color='blue', label="Landings")
-        # plt.xlabel("X")
-        # plt.ylabel("Y")
-        # plt.title("Rider Trajectory")
-        # plt.legend()
         plt.show()
+    
+    def plot_trajectory(self, axis=None):
+        """
+        Plot the rider trajectory.
+        """
+        positions = np.array(self.trajectory.positions)
+        axis.plot(positions[:, 0], positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=1, linestyle="None")
+
 
 if __name__ == "__main__":
     my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
@@ -270,5 +281,3 @@ if __name__ == "__main__":
     simulation.run()
     simulation.plot()
     sys.exit(0)
-
-
