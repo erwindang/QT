@@ -68,31 +68,30 @@ class MainWindow(QMainWindow):
         # self.canvas.axes1.title.set_color('white')  # Set title color to white
         # self.canvas.axes1.grid(color='white', linestyle='--', linewidth=0.5)  # Set grid color to white
 
-        # Plot the line
+        # Plot line profile
         # ground, = self.canvas.axes1.plot(self.x, self.y, color='tan', label='Line', linewidth=1.5, alpha=0.3)
         # self.canvas.axes1.fill_between(self.x, self.canvas.axes1.get_ylim()[0], self.y, color='tan', alpha=0.5)
         
-        # Plot the line with smoothing
+        # Plot line profile with smoothing
         cubic_spline = CubicSpline(self.x, self.y)
         smooth_x = np.linspace(min(self.x), max(self.x), 200)  # 500 points for a smooth curve
         smooth_y = cubic_spline(smooth_x)
         ground, = self.canvas.axes1.plot(smooth_x, smooth_y, color='tan', label='Line', linewidth=1.0, alpha=0.3)
         self.canvas.axes1.fill_between(smooth_x, self.canvas.axes1.get_ylim()[0], smooth_y, color='tan', alpha=0.5)
 
-        # Plot the trajectory
-  
-        positions = np.array(simulation.trajectory.positions)
-        self.canvas.axes1.plot(positions[:, 0], positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=1, linestyle="None", alpha=0.8)
+        # Plot trajectory
+        self.positions = np.array(simulation.trajectory.positions)
+        self.canvas.axes1.plot(self.positions[:, 0], self.positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=1, linestyle="None", alpha=0.8)
        
         # Initialize marker and marker lines
-        self.marker, = self.canvas.axes1.plot([self.x[-1]], [self.y[-1]], 'b+', markersize=20, label='Marker')
-        self.v_line = self.canvas.axes1.axvline(x=self.x[len(self.x)-1], color='b', linestyle='--', linewidth=1, alpha=0.2)
-        self.h_line = self.canvas.axes1.axhline(y=self.y[len(self.y)-1], color='b', linestyle='--', linewidth=1, alpha=0.2)
-        
+        self.marker, = self.canvas.axes1.plot(self.positions[-1, 0], self.positions[-1, 1], 'b+', markersize=20, label='Marker')
+        self.v_line = self.canvas.axes1.axvline(x=self.positions[-1, 0], color='b', linestyle='--', linewidth=1, alpha=0.2)
+        self.h_line = self.canvas.axes1.axhline(y=self.positions[-1, 1], color='b', linestyle='--', linewidth=1, alpha=0.2)
+              
         # Add labels
-        self.canvas.axes1.set_title('Basic X-Y Graph')
-        self.canvas.axes1.set_xlabel('X axis')
-        self.canvas.axes1.set_ylabel('Y axis')
+        self.canvas.axes1.set_title('Ride')
+        # self.canvas.axes1.set_xlabel('m')
+        self.canvas.axes1.set_ylabel('(m)')
         self.canvas.axes1.grid(True)  
         self.canvas.axes1.axis ('equal')
         self.canvas.axes1.set_xlim(min(self.x),max(self.x))
@@ -102,17 +101,28 @@ class MainWindow(QMainWindow):
         self.coord_text = self.canvas.axes1.text(0.5, 0.9, '', transform=self.canvas.axes1.transAxes, bbox=dict(facecolor='white', alpha=0))
         self.coord_text.set_text('x= y=')
 
+        # Plot speed
+        self.speeds = np.array([abs(speed.value) for speed in simulation.trajectory.speed])
+        self.canvas.axes2.plot(self.positions[:, 0], self.speeds, label="Speed", color="red", marker='+', markersize=1, linestyle="None")
+        self.canvas.axes2.set_title('Speed')    
+        self.canvas.axes2.set_xlabel('distance (m)')
+        self.canvas.axes2.set_ylabel('(m/s)')
+        self.canvas.axes2.grid(True)
+        # self.canvas.axes2.axis ('equal')
+        # self.canvas.axes2.set_xlim(min(self.speeds),max(self.speeds[:]))
+        # self.canvas.axes2.set_ylim(min(self.speeds),max(self.speeds[:]))       
+
         # Redraw the canvas
         self.canvas.draw()
 
     def on_mouse_move(self, event):
         
         if event.inaxes:
-            if event.xdata < max(self.x) and event.xdata > min(self.x):         
+            if event.xdata < max(self.positions[:, 0]) and event.xdata > min(self.positions[:, 0]):         
                 # Update marker
                 x_mouse = event.xdata  # Mouse x-coordinate
                 #y_plot = self.interp_func(x_mouse)  # Compute y-value from plot
-                y_plot = np.interp(x_mouse, self.x, self.y)
+                y_plot = np.interp(x_mouse, self.positions[:, 0], self.positions[:, 1])
                 self.marker.set_data([x_mouse], [y_plot])
                 
                 # Update marker lines
