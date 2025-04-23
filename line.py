@@ -66,7 +66,11 @@ class GroundProfile:
         Interpolate the segment to create points at the specified resolution.       
         The points are added to the line_x and line_y lists.
         """
-        intp_x = np.arange(segment.start_x, segment.end_x, self.res)
+        res = self.res*cos(np.radians(segment.angle))
+
+        intp_x = np.arange(segment.start_x, segment.end_x, res)
+        if intp_x[-1] >= segment.end_x:
+            intp_x = intp_x[:-1]  # Remove the last point if it exceeds end_x
         intp_y = np.interp(intp_x, [segment.start_x, segment.end_x], [segment.start_y, segment.end_y])
         self.x.extend(intp_x)
         self.y.extend(intp_y)

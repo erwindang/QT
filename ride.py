@@ -198,6 +198,9 @@ class RideTrajectory:
                             self.state = RideState.ROLLING
                             self.landings.append((self.line.x[i], self.line.y[i]))
                             new_speed, new_position = RidePhysics.compute_landing(current_speed, current_segment, self.drag)
+                    
+                    # case RideState.STOPPED: #FIXME
+
                     case _:
                         new_speed = (current_speed)
                         new_position = (self.line.x[i-1], self.line.y[i-1])
@@ -235,7 +238,6 @@ class RideSimulation:
         axs[0].plot(self.trajectory.line.x, self.trajectory.line.y, label="Ground Profile", color="tan")
         # Plot position & take offs (trajectory)
         axs[0].plot(positions[:, 0], positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=1, linestyle="None")
-        # axs[0].plot(positions[:, 0], positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=4, linestyle="-")
         if (len(self.trajectory.landings) > 0):
             axs[0].scatter(*zip(*self.trajectory.landings), color='red', label="Landings", marker='x')
         if (len(self.trajectory.takeoffs) > 0):
@@ -255,13 +257,6 @@ class RideSimulation:
         axs[1].grid(True)
 
         plt.show()
-    
-    def plot_trajectory(self, axis=None):
-        """
-        Plot the rider trajectory.
-        """
-        positions = np.array(self.trajectory.positions)
-        axis.plot(positions[:, 0], positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=1, linestyle="None")
 
 
 if __name__ == "__main__":

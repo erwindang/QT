@@ -1,22 +1,23 @@
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+from scipy.interpolate import CubicSpline
 
-# Define the grid
-x = np.arange(0, 5, 1)
-y = np.arange(0, 5, 1)
-X, Y = np.meshgrid(x, y)
+# Original data with harsh angles
+x = np.array([0, 1, 2, 3, 4, 5])
+y = np.array([0, 8, 2, 10, 4, 12])
 
-# Define the vector components
-U = np.ones_like(X)  # x-component of the vector
-V = np.ones_like(Y)  # y-component of the vector
+# Create finer x points for smoother curve
+x_fine = np.linspace(min(x), max(x), 100)
 
-# Create the quiver plot
-plt.quiver(X, Y, U, V, color='blue', scale=1)
+# Apply cubic spline interpolation
+cs = CubicSpline(x, y)
+y_smooth = cs(x_fine)
 
-# Add labels and title
-plt.title("Quiver Plot Example")
-plt.xlabel("X-axis")
-plt.ylabel("Y-axis")
-
-# Show the plot
+# Plot original points and smoothed line
+plt.figure(figsize=(10, 6))
+plt.plot(x, y, 'o-', label='Original Line')
+plt.plot(x_fine, y_smooth, '-', label='Smoothed Line')
+plt.legend()
+plt.title("Cubic Spline Interpolation")
+plt.grid(True)
 plt.show()

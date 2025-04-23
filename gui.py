@@ -12,8 +12,9 @@ class MplCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
         #fig.patch.set_facecolor('black')  # Set the canvas background to black
-        self.axes1 = fig.add_subplot(211)
-        self.axes2 = fig.add_subplot(212)
+        self.axes1 = fig.add_subplot(311)
+        self.axes2 = fig.add_subplot(312)
+        self.axes3 = fig.add_subplot(313)
         super(MplCanvas, self).__init__(fig)
 
 class MainWindow(QMainWindow):
@@ -57,7 +58,8 @@ class MainWindow(QMainWindow):
         self.canvas.axes2.clear()
        
         # Set black background and white grid/axes
-        # self.canvas.axes1.set_facecolor('black')  # Set the background color to black
+        # self.canvas.axes1.set_facecolor('dimgrey')  # Set the background color to black
+        # self.canvas.axes2.set_facecolor('dimgrey')  # Set the background color to black
         # self.canvas.axes1.tick_params(colors='white')  # Set tick colors to white
         # self.canvas.axes1.spines['bottom'].set_color('white')  # Set x-axis spine color to white
         # self.canvas.axes1.spines['left'].set_color('white')  # Set y-axis spine color to white
@@ -76,12 +78,12 @@ class MainWindow(QMainWindow):
         cubic_spline = CubicSpline(self.x, self.y)
         smooth_x = np.linspace(min(self.x), max(self.x), 200)  # 500 points for a smooth curve
         smooth_y = cubic_spline(smooth_x)
-        ground, = self.canvas.axes1.plot(smooth_x, smooth_y, color='tan', label='Line', linewidth=1.0, alpha=0.3)
-        self.canvas.axes1.fill_between(smooth_x, self.canvas.axes1.get_ylim()[0], smooth_y, color='tan', alpha=0.5)
+        ground, = self.canvas.axes1.plot(smooth_x, smooth_y, color='tan', label='Line', linewidth=1.0, alpha=0.2)
+        self.canvas.axes1.fill_between(smooth_x, self.canvas.axes1.get_ylim()[0], smooth_y, color='tan', alpha=0.6)
 
         # Plot trajectory
         self.positions = np.array(simulation.trajectory.positions)
-        self.canvas.axes1.plot(self.positions[:, 0], self.positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=1, linestyle="None", alpha=0.8)
+        self.canvas.axes1.plot(self.positions[:, 0], self.positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=1, linestyle="None", alpha=0.5)
         self.canvas.axes1.set_title('Line')
         # self.canvas.axes1.set_xlabel('m')
         self.canvas.axes1.set_ylabel('(m)')
@@ -92,7 +94,7 @@ class MainWindow(QMainWindow):
        
         # Plot speed
         self.speeds = np.array([abs(speed.value) for speed in simulation.trajectory.speed])
-        self.canvas.axes2.plot(self.positions[:, 0], self.speeds, label="Speed", color="red", marker='+', markersize=1, linestyle="None")
+        self.canvas.axes2.plot(self.positions[:, 0], self.speeds, label="Speed", color="red", marker='+', markersize=1, linestyle="None", alpha=0.5)
         self.canvas.axes2.set_title('Speed')    
         self.canvas.axes2.set_xlabel('distance (m)')
         self.canvas.axes2.set_ylabel('(m/s)')
@@ -146,9 +148,10 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
-    my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (0.7,-70.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
-    # my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
-    # my_segments = [(1.0,-20.0), (1.0,-8.0), (1.0,0.0)]
+    # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (0.7,-70.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
+    # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0)]
+    my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
+    #my_segments = [(1.0,-20.0), (1.0, -70.0), (1.0,0.0)]
     # my_segments = [(1.0,-4.0)]
     # my_segments = [(1.0, 0.0)]
     my_resolution = 0.1 #meters
