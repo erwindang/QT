@@ -69,21 +69,26 @@ class RidePhysics:
         Returns:
             float: Updated speed (SpeedVector). 
             float: Position (x,y) tuple .
+            float: Time taken to travel the segment.
         """
         g = 9.80665   # gravity m.s-2
-        try:
-            
-            speed =  sqrt((2*g*(sin(-segment.radian) - drag.Mu_roll_drag*cos(segment.radian))
-                        - drag.K_drag_const*pow(current_speed.value,2))*segment.length 
-                        + pow(current_speed.value,2)) 
-            #speed =  sqrt((2*g*sin(-segment.radian))*segment.length + pow(current_speed.value,2))
-        except ValueError:
-            val =  (2*g*(sin(-segment.radian) - drag.Mu_roll_drag*cos(segment.radian)) 
-                    - drag.K_drag_const*pow(current_speed.value,2))*segment.length + pow(current_speed.value,2) 
-            print (f"compute_rolling speed error: negative value {val} for segment {segment}")
+        val =  (2*g*(sin(-segment.radian) - drag.Mu_roll_drag*cos(segment.radian)) 
+                    - drag.K_drag_const*pow(current_speed.value,2))*segment.length + pow(current_speed.value,2)
+        #speed =  (2*g*sin(-segment.radian))*segment.length + pow(current_speed.value,2)
+        if val < 0:
+            print (f"negative compute_rolling {val} for segment {segment}. Set speed to 0")
             speed = 0.0
+            time = float('inf')
+        else:
+            try:
+                speed =  sqrt(val)
+                time = segment.length / speed
+            except ValueError:
+                print (f"compute_rolling speed error {val} for segment {segment}. Set speed to 0")
+                speed = 0.0
+                time = float('inf')
 
-        return SpeedVector(speed, segment.degree, current_speed.unit), (segment.end_x, segment.end_y)
+        return SpeedVector(speed, segment.degree, current_speed.unit), (segment.end_x, segment.end_y), time
     
     @staticmethod
     def compute_jump (current_speed, segment, drag, take_off):
@@ -108,15 +113,24 @@ class RidePhysics:
         new_position = (segment.end_x, take_off.y + delta_y)
         
         # Compute new speed
-        new_speed_x = take_off.speed.x_value - drag.K_drag_const * take_off.speed.x_value**2
-        # new_speed_x = current_speed.x_value
-        new_speed_y = - g * dx / take_off.speed.x_value + take_off.speed.y_value - drag.K_drag_const * take_off.speed.y_value**2
-        # new_speed_y = - g * dx / current_speed.x_value + current_speed.y_value 
-        new_speed = sqrt(pow(new_speed_x,2) + pow(new_speed_y,2))
+        #FIXME: no drag in jump speed
+        new_speed_x = take_off.speed.x_value
+        new_speed_y = - g * dx / take_off.speed.x_value + take_off.speed.y_value
+        val = pow(new_speed_x,2) + pow(new_speed_y,2)
+
+        try:
+            new_speed = sqrt(val)
+            time = dx / take_off.speed.x_value
+        except ValueError:
+            print (f"compute_jump speed error {val} for segment {segment}. Set speed to 0")
+            new_speed = 0.0
+            time = float('inf')
+
         new_angle = atan2(new_speed_y, new_speed_x)
         new_speed_vector = SpeedVector(new_speed, degrees(new_angle), take_off.speed.unit)
         
-        return new_speed_vector, new_position
+             
+        return new_speed_vector, new_position, time
 
     @staticmethod
     def compute_landing (current_speed, segment, drag):
@@ -132,11 +146,27 @@ class RidePhysics:
             float: Updated speed (SpeedVector). 
             float: Position (x,y) tuple .
         """
-        g = 9.80665   # gravity m.s-2
-        speed_x = current_speed.x_value - drag.K_drag_const * current_speed.x_value**2
-        speed_y = speed_x * tan(segment.radian)
-        speed = sqrt(pow(speed_x,2) + pow(speed_y,2)) 
-        return SpeedVector(speed, segment.degree, current_speed.unit), (segment.end_x, segment.end_y)
+        # speed_x = current_speed.x_value - drag.K_drag_const * current_speed.x_value**2
+        # speed_y = speed_x * tan(segment.radian)
+        # val = pow(speed_x,2) + pow(speed_y,2)
+        # try:
+        #     speed = sqrt(val)
+        #     time = segment.length / speed
+        # except ValueError:
+        #     print (f"compute_landing speed error {val} for segment {segment}. Set speed to 0")
+        #     speed = 0.0
+        #     time = float('inf')
+
+        # FIXME: no drag in landing speed
+        speed = current_speed.value * cos(current_speed.radian - segment.radian)
+        try:
+            time = segment.dx / current_speed.x_value  #FIXME Assuming horizontal speed is constant
+        except ZeroDivisionError:
+            print (f"compute_landing speed error {current_speed.x_value} for segment {segment}. Set speed to 0")
+            speed = 0.0
+            time = float('inf')
+
+        return SpeedVector(speed, segment.degree, current_speed.unit), (segment.end_x, segment.end_y), time
     
     @staticmethod
     def is_take_off(speed, segment):
@@ -162,6 +192,7 @@ class RideTrajectory:
         self.positions = [(line.x[0], line.y[0])]  # Initial position
         self.takeoffs = []  # Store take-off points
         self.landings = []  # Store landing points
+        self.time=[0.0]  # Store time points
 
     def compute_trajectory(self):
         """
@@ -186,33 +217,45 @@ class RideTrajectory:
                             new_take_off = TakeOff(self.line.x[i-1], self.line.y[i-1], current_speed)
                             self.takeoffs.append(new_take_off)
                             # Compute jump trajectory
-                            new_speed, new_position = RidePhysics.compute_jump(current_speed, current_segment, self.drag, self.takeoffs[-1])
+                            new_speed, new_position, delay = RidePhysics.compute_jump(current_speed, current_segment, self.drag, self.takeoffs[-1])
                         else: #ROLLING
-                            new_speed, new_position = RidePhysics.compute_rolling(current_speed, current_segment, self.drag)
-
+                            new_speed, new_position, delay = RidePhysics.compute_rolling(current_speed, current_segment, self.drag)
+                        
                     case RideState.JUMPING:                       
                         # new_speed, new_position = RidePhysics.compute_rolling(current_speed, current_segment, self.drag)
-                        new_speed, new_position = RidePhysics.compute_jump(current_speed, current_segment, self.drag, self.takeoffs[-1])
+                        new_speed, new_position, delay = RidePhysics.compute_jump(current_speed, current_segment, self.drag, self.takeoffs[-1])
                         if new_position[1] < self.line.y[i]:
                             # LANDING - Log landing position
                             self.state = RideState.ROLLING
                             self.landings.append((self.line.x[i], self.line.y[i]))
-                            new_speed, new_position = RidePhysics.compute_landing(current_speed, current_segment, self.drag)
+                            new_speed, new_position, delay = RidePhysics.compute_landing(current_speed, current_segment, self.drag)
                     
-                    # case RideState.STOPPED: #FIXME
+                    case RideState.STOPPED:
+                        new_speed = SpeedVector(0.0, 0.0, current_speed.unit)
+                        new_position = (self.line.x[i], self.line.y[i])
+                        delay = float('inf')
 
                     case _:
                         new_speed = (current_speed)
                         new_position = (self.line.x[i-1], self.line.y[i-1])
+                        delay = 0.0
+                        print(f"Error Unknown state: {self.state}. Using some default values.")
                         raise ValueError("Undefined riding state")
                         
+                if new_speed.value == 0.0:
+                    self.state = RideState.STOPPED
+    
                 self.speed.append(new_speed)
                 self.positions.append(new_position)
                 self.states.append(self.state)
+                self.time.append(self.time[-1] + delay)
+            
             else: 
+                self.state = RideState.STOPPED
                 self.speed.append(current_speed)
                 self.positions.append((self.line.x[i], self.line.y[i]))
                 self.states.append(self.state)
+                self.time.append(float('inf'))  
 
 class RideSimulation:
     def __init__(self, line, initial_speed, drag):

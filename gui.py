@@ -94,7 +94,7 @@ class MainWindow(QMainWindow):
        
         # Plot speed
         self.speeds = np.array([abs(speed.value) for speed in simulation.trajectory.speed])
-        self.canvas.axes2.plot(self.positions[:, 0], self.speeds, label="Speed", color="red", marker='+', markersize=1, linestyle="None", alpha=0.5)
+        self.canvas.axes2.plot(self.positions[:, 0], self.speeds, label="Speed", color="blueviolet", marker='+', markersize=1, linestyle="None", alpha=0.8)
         self.canvas.axes2.set_title('Speed')    
         self.canvas.axes2.set_xlabel('distance (m)')
         self.canvas.axes2.set_ylabel('(m/s)')
@@ -104,13 +104,13 @@ class MainWindow(QMainWindow):
         # self.canvas.axes2.set_ylim(min(self.speeds),max(self.speeds[:]))       
 
         # Initialize marker and marker lines
-        self.marker1, = self.canvas.axes1.plot(self.positions[-1, 0], self.positions[-1, 1], 'b+', markersize=20, label='Marker')
-        self.v_line1 = self.canvas.axes1.axvline(x=self.positions[-1, 0], color='b', linestyle='--', linewidth=1, alpha=0.2)
-        self.h_line1 = self.canvas.axes1.axhline(y=self.positions[-1, 1], color='b', linestyle='--', linewidth=1, alpha=0.2)
+        self.marker1, = self.canvas.axes1.plot(self.positions[-1, 0], self.positions[-1, 1], color = "blue" ,marker='+',  markersize=20, label='Marker')
+        self.v_line1 = self.canvas.axes1.axvline(x=self.positions[-1, 0], color='blue', linestyle='--', linewidth=1, alpha=0.2)
+        self.h_line1 = self.canvas.axes1.axhline(y=self.positions[-1, 1], color='blue', linestyle='--', linewidth=1, alpha=0.2)
 
-        self.marker2, = self.canvas.axes2.plot(self.positions[-1, 0], self.positions[-1, 1], 'r+', markersize=20, label='Marker')
-        self.v_line2 = self.canvas.axes2.axvline(x=self.positions[-1, 0], color='r', linestyle='--', linewidth=1, alpha=0.2)
-        self.h_line2 = self.canvas.axes2.axhline(y=self.speeds[-1], color='r', linestyle='--', linewidth=1, alpha=0.2)
+        self.marker2, = self.canvas.axes2.plot(self.positions[-1, 0], self.positions[-1, 1], color = "blueviolet", marker='+', markersize=20, label='Marker')
+        self.v_line2 = self.canvas.axes2.axvline(x=self.positions[-1, 0], color='blueviolet', linestyle='--', linewidth=1, alpha=0.2)
+        self.h_line2 = self.canvas.axes2.axhline(y=self.speeds[-1], color='blueviolet', linestyle='--', linewidth=1, alpha=0.2)
 
         # Text for displaying coordinates
         self.coord_text = self.canvas.axes1.text(0.5, 0.9, '', transform=self.canvas.axes1.transAxes, bbox=dict(facecolor='white', alpha=0))
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     # my_segments = [(1.0,-4.0)]
     # my_segments = [(1.0, 0.0)]
     my_resolution = 0.1 #meters
-    start_speed = SpeedVector(1, 0.0, "m/s")  # Initial speed of the rider
+    start_speed = SpeedVector(6, 0.0, "m/s")  # Initial speed of the rider
     drag = RideDrag()
     line = GroundProfile (my_segments, my_resolution) 
     simulation = RideSimulation(line, start_speed, drag)
