@@ -86,28 +86,29 @@ class RidePhysics:
         if val < 0:
             print (f"negative compute_rolling {val} for segment {segment}. Set speed to 0")
             speed = 0.0
-            time = float('inf')
+            delay = float('inf')
         else:
             try:
                 speed =  sqrt(val)
-                time = segment.length / speed
+                delay = segment.length / speed
             except ValueError:
                 print (f"compute_rolling speed error {val} for segment {segment}. Set speed to 0")
                 speed = 0.0
-                time = float('inf')
+                delay = float('inf')
         
         new_speed = SpeedVector(speed, segment.degree, current_speed.unit)
         new_position = (segment.end_x, segment.end_y)
+        new_time = current_time + delay
 
         # Compute acceleration
-        acceleration_x = (new_speed.x_value - current_speed.x_value) / (time - current_time)
-        acceleration_y = (new_speed.y_value - current_speed.y_value) / (time - current_time)
+        acceleration_x = (new_speed.x_value - current_speed.x_value) / delay
+        acceleration_y = (new_speed.y_value - current_speed.y_value) / delay
         acceleration_unit = set_acceleration_unit(current_speed.unit)
         acceleration_value = sqrt(pow(acceleration_x,2) + pow(acceleration_y,2))
-        acceleration_angle = atan2(acceleration_y, acceleration_x)
+        acceleration_angle = degrees(atan2(acceleration_y, acceleration_x))
         acceleration = AccelerationVector(acceleration_value, acceleration_angle, acceleration_unit) 
 
-        return new_speed, new_position, time, acceleration
+        return new_speed, new_position, new_time, acceleration
     
     @staticmethod
     def compute_jump (current_speed, current_time, segment, drag, take_off):
@@ -139,23 +140,24 @@ class RidePhysics:
 
         try:
             new_speed = sqrt(new_speed_value)
-            time = dx / take_off.speed.x_value
+            delay = dx / take_off.speed.x_value
         except ValueError:
             print (f"compute_jump speed error {new_speed_value} for segment {segment}. Set speed to 0")
             new_speed = 0.0
-            time = float('inf')
+            delay = float('inf')
 
         new_angle = atan2(new_speed_y, new_speed_x)
         new_speed_vector = SpeedVector(new_speed, degrees(new_angle), take_off.speed.unit)
+        new_time = current_time + delay
 
-        acceleration_x = (new_speed_x - current_speed.x_value) / (time - current_time)
-        acceleration_y = (new_speed_y - current_speed.y_value) / (time - current_time)
+        acceleration_x = (new_speed_x - current_speed.x_value) / delay
+        acceleration_y = (new_speed_y - current_speed.y_value) / delay
         acceleration_unit = set_acceleration_unit(current_speed.unit)
         acceleration_value = sqrt(pow(acceleration_x,2) + pow(acceleration_y,2))
         acceleration_angle = atan2(acceleration_y, acceleration_x)
         acceleration = AccelerationVector(acceleration_value, acceleration_angle, acceleration_unit) 
              
-        return new_speed_vector, new_position, time, acceleration
+        return new_speed_vector, new_position, new_time, acceleration
 
     @staticmethod
     def compute_landing (current_speed, current_time, segment, drag):
@@ -185,23 +187,24 @@ class RidePhysics:
         # FIXME: no drag in landing speed
         speed = current_speed.value * cos(current_speed.radian - segment.radian)
         try:
-            time = segment.dx / current_speed.x_value  #FIXME Assuming horizontal speed is constant
+            delay = segment.dx / current_speed.x_value  #FIXME Assuming horizontal speed is constant
         except ZeroDivisionError:
             print (f"compute_landing speed error {current_speed.x_value} for segment {segment}. Set speed to 0")
             speed = 0.0
-            time = float('inf')
+            delay = float('inf')
 
         speed_vector= SpeedVector(speed, segment.degree, current_speed.unit)
         position = (segment.end_x, segment.end_y)
+        new_time = current_time + delay
 
-        acceleration_x = (speed_vector.x_value - current_speed.x_value) / (time - current_time)
-        acceleration_y = (speed_vector.y_value - current_speed.y_value) / (time - current_time)
+        acceleration_x = (speed_vector.x_value - current_speed.x_value) / delay
+        acceleration_y = (speed_vector.y_value - current_speed.y_value) / delay
         acceleration_unit = set_acceleration_unit(current_speed.unit)
         acceleration_value = sqrt(pow(acceleration_x,2) + pow(acceleration_y,2))
         acceleration_angle = atan2(acceleration_y, acceleration_x)
         acceleration = AccelerationVector(acceleration_value, acceleration_angle, acceleration_unit) 
 
-        return speed_vector, position, time, acceleration
+        return speed_vector, position, delay, acceleration
     
     @staticmethod
     def is_take_off(speed, segment):
@@ -317,7 +320,7 @@ class RideSimulation:
         speeds = np.array([abs(speed.value) for speed in self.trajectory.speed])
     
         # Create subplots
-        fig, axs = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+        fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
 
         # Plot ground profile
         axs[0].plot(self.trajectory.line.x, self.trajectory.line.y, label="Ground Profile", color="tan")
@@ -336,27 +339,36 @@ class RideSimulation:
         # Plot speed
         axs[1].plot(positions[:, 0], speeds, label="Speed", color="red", marker='+', markersize=1, linestyle="None")
         # axs[1].plot(positions[:, 0], speeds, label="Speed", color="red", marker='+', markersize=4, linestyle="-")
-        axs[1].set_xlabel("x (m)")
+        #axs[1].set_xlabel("x (m)")
         axs[1].set_ylabel("Speed (m/s) ")
         axs[1].legend()
         axs[1].grid(True)
+
+        # Plot acceleration
+        axs[2].plot(positions[:, 0], [accel.y_value for accel in self.trajectory.acceleration], label="Acceleration", color="green", marker='+', markersize=1, linestyle="-")
+        axs[2].set_xlabel("X (m)")
+        axs[2].set_ylabel("Acceleration (m/s²)")
+        axs[2].legend()
+        axs[2].grid(True)
 
         plt.show()
 
 
 if __name__ == "__main__":
-    my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
-    # my_segments = [(0.5,0.0), (0.3,4.0), (0.3,6.0), (0.3,8.0), (0.3,11.0), (0.3,22.0), (0.3,40.0), (0.3,54.0), (1.0,0.0), (2.0,-25.0)]
+    # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
+    my_segments = [(0.5,0.0), (0.3,4.0), (0.3,6.0), (0.3,8.0), (0.3,11.0), (0.3,22.0), (0.3,40.0), (0.3,54.0), (1.0,0.0), (2.0,-25.0)]
+    # my_segments = [(1.0,0.0), (1.0,-89.0), (3.0,0.0)] # step down
     # my_segments = [(1.0,-20.0), (1.0,-8.0)]
     # my_segments = [(1.0,-4.0)]
     # my_segments = [(1.0,0.0)]  # 1 meters flat
     # my_segments = [(10.0,0.0)]  # flat
+    # my_segments = [(1.0,0.0),(1.0,0.0)]  # 2 meters flat
+    # my_segments = [(1.0,5.0)]  # ramp up
     # my_segments = [(20.0,0.0),(20.0,0.0),(20.0,0.0),(20.0,0.0),(20.0,0.0)]  # 100 meters flat
-
 
     drag = RideDrag()
     line = GroundProfile(my_segments, 0.1)  # Create a ground profile with segments and resolution
-    start_speed = SpeedVector(0.5, 0.0, "m/s")  # Initial speed of the rider
+    start_speed = SpeedVector(5, 0.0, "m/s")  # Initial speed of the rider
     simulation = RideSimulation(line, start_speed, drag)
     simulation.run()
     simulation.plot()
