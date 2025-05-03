@@ -13,8 +13,8 @@ class MplCanvas(FigureCanvas):
         fig = Figure(figsize=(width, height), dpi=dpi)
         #fig.patch.set_facecolor('black')  # Set the canvas background to black
         self.axes1 = fig.add_subplot(311)
-        self.axes2 = fig.add_subplot(312)
-        self.axes3 = fig.add_subplot(313)
+        self.axes2 = fig.add_subplot(312, sharex=self.axes1)
+        self.axes3 = fig.add_subplot(313, sharex=self.axes1)
         super(MplCanvas, self).__init__(fig)
 
 class MainWindow(QMainWindow):
@@ -22,7 +22,6 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
 
         # Compute line
-        # self.simulation = ride_simulation
         self.x=line.x
         self.y=line.y
 
@@ -56,6 +55,7 @@ class MainWindow(QMainWindow):
         # Clear the previous plot
         self.canvas.axes1.clear()
         self.canvas.axes2.clear()
+        self.canvas.axes3.clear()
        
         # Set black background and white grid/axes
         # self.canvas.axes1.set_facecolor('dimgrey')  # Set the background color to black
@@ -78,47 +78,63 @@ class MainWindow(QMainWindow):
         cubic_spline = CubicSpline(self.x, self.y)
         smooth_x = np.linspace(min(self.x), max(self.x), 200)  # 500 points for a smooth curve
         smooth_y = cubic_spline(smooth_x)
-        ground, = self.canvas.axes1.plot(smooth_x, smooth_y, color='tan', label='Line', linewidth=1.0, alpha=0.2)
-        self.canvas.axes1.fill_between(smooth_x, self.canvas.axes1.get_ylim()[0], smooth_y, color='tan', alpha=0.6)
+        ground, = self.canvas.axes1.plot(smooth_x, smooth_y, color="tan", label='Line', linewidth=1.0, alpha=0.2)
+        self.canvas.axes1.fill_between(smooth_x, self.canvas.axes1.get_ylim()[0], smooth_y, color="tan", alpha=0.5)
 
         # Plot trajectory
         self.positions = np.array(simulation.trajectory.positions)
         self.canvas.axes1.plot(self.positions[:, 0], self.positions[:, 1], label="Trajectory", color="blue", marker='+', markersize=1, linestyle="None", alpha=0.5)
-        self.canvas.axes1.set_title('Line')
-        # self.canvas.axes1.set_xlabel('m')
+        self.canvas.axes1.set_title('line')
         self.canvas.axes1.set_ylabel('(m)')
         self.canvas.axes1.grid(True)  
         self.canvas.axes1.axis ('equal')
         self.canvas.axes1.set_xlim(min(self.x),max(self.x))
-        # self.canvas.axes1.set_ylim(min(self.y)*1.2,max(self.y)*2)   
-       
+
+        # Set equal scaling for x and y axes
+        self.canvas.axes1.set_aspect('equal', adjustable='box')
+        self.canvas.axes1.set_xlim(min(self.x), max(self.x))
+        self.canvas.axes1.set_ylim(min(self.positions[:, 0]*0.9), max(self.positions[:, 1]*1.1))
+
+
         # Plot speed
         self.speeds = np.array([abs(speed.value) for speed in simulation.trajectory.speed])
-        self.canvas.axes2.plot(self.positions[:, 0], self.speeds, label="Speed", color="blueviolet", marker='+', markersize=1, linestyle="None", alpha=0.8)
-        self.canvas.axes2.set_title('Speed')    
-        self.canvas.axes2.set_xlabel('distance (m)')
+        self.canvas.axes2.plot(self.positions[:, 0], self.speeds, label="Speed", color="red", marker='+', markersize=1, linestyle="None", alpha=0.8)
+        self.canvas.axes2.set_title('speed')    
         self.canvas.axes2.set_ylabel('(m/s)')
         self.canvas.axes2.grid(True)
-        # self.canvas.axes2.axis ('equal')
-        # self.canvas.axes2.set_xlim(min(self.speeds),max(self.speeds[:]))
-        # self.canvas.axes2.set_ylim(min(self.speeds),max(self.speeds[:]))       
+
+        # Plot acceleration
+        self.accelerations = np.array([abs(acc.value) for acc in simulation.trajectory.acceleration])
+        self.canvas.axes3.plot(self.positions[:, 0], self.accelerations[:], label="Acceleration", color="blueviolet", marker='None', markersize=1, linestyle=":", alpha=0.8)
+        self.canvas.axes3.set_title('acceleration')    
+        self.canvas.axes3.set_ylabel('(m/s²)')
+        self.canvas.axes3.grid(True)   
+
 
         # Initialize marker and marker lines
         self.marker1, = self.canvas.axes1.plot(self.positions[-1, 0], self.positions[-1, 1], color = "blue" ,marker='+',  markersize=20, label='Marker')
-        self.v_line1 = self.canvas.axes1.axvline(x=self.positions[-1, 0], color='blue', linestyle='--', linewidth=1, alpha=0.2)
-        self.h_line1 = self.canvas.axes1.axhline(y=self.positions[-1, 1], color='blue', linestyle='--', linewidth=1, alpha=0.2)
+        self.v_line1 = self.canvas.axes1.axvline(x=self.positions[-1, 0], color='blue', linestyle='-', linewidth=1, alpha=0.2)
+        self.h_line1 = self.canvas.axes1.axhline(y=self.positions[-1, 1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
 
-        self.marker2, = self.canvas.axes2.plot(self.positions[-1, 0], self.positions[-1, 1], color = "blueviolet", marker='+', markersize=20, label='Marker')
-        self.v_line2 = self.canvas.axes2.axvline(x=self.positions[-1, 0], color='blueviolet', linestyle='--', linewidth=1, alpha=0.2)
-        self.h_line2 = self.canvas.axes2.axhline(y=self.speeds[-1], color='blueviolet', linestyle='--', linewidth=1, alpha=0.2)
+        self.marker2, = self.canvas.axes2.plot(self.positions[-1, 0], self.positions[-1, 1], color = "red", marker='+', markersize=20, label='Marker')
+        self.v_line2 = self.canvas.axes2.axvline(x=self.positions[-1, 0], color='red', linestyle='-', linewidth=1, alpha=0.2)
+        self.h_line2 = self.canvas.axes2.axhline(y=self.speeds[-1], color='red', linestyle='--', linewidth=1, alpha=0.2)
+
+        self.marker3, = self.canvas.axes3.plot(self.positions[-1, 0], self.positions[-1, 1], color = "blueviolet", marker='+', markersize=20, label='Marker')
+        self.v_line3 = self.canvas.axes3.axvline(x=self.positions[-1, 0], color='blueviolet', linestyle='-', linewidth=1, alpha=0.2)
+        self.h_line3 = self.canvas.axes3.axhline(y=self.accelerations[-1], color='blueviolet', linestyle='-', linewidth=1, alpha=0.2)
 
         # Text for displaying coordinates
         self.coord_text = self.canvas.axes1.text(0.5, 0.9, '', transform=self.canvas.axes1.transAxes, bbox=dict(facecolor='white', alpha=0))
-        self.coord_text.set_text(f'x: {self.positions[-1, 0]:.3f}  y: {self.positions[-1, 1]:.3f}')
+        self.coord_text.set_text(f'x: {self.positions[-1, 0]:.3f}  height: {self.positions[-1, 1]-self.y[-1]:.3f}')
 
         # Text for displaying speed
-        self.speed_text = self.canvas.axes2.text(0.5, 0.9, '', transform=self.canvas.axes2.transAxes, bbox=dict(facecolor='white', alpha=0))
+        self.speed_text = self.canvas.axes2.text(0.5, 0.85, '', transform=self.canvas.axes2.transAxes, bbox=dict(facecolor='white', alpha=0))
         self.speed_text.set_text(f'{self.speeds[-1]:.3f} (m/s)')
+
+        # Text for displaying acceleration
+        self.accel_text = self.canvas.axes3.text(0.5, 0.85, '', transform=self.canvas.axes3.transAxes, bbox=dict(facecolor='white', alpha=0))
+        self.accel_text.set_text(f'{self.accelerations[-1]:.3f} (m/s²)')
 
         # Redraw the canvas
         self.canvas.draw()
@@ -131,10 +147,12 @@ class MainWindow(QMainWindow):
 
                 # Update coord marker
                 y_plot = np.interp(x_mouse, self.positions[:, 0], self.positions[:, 1])
+                height = y_plot - np.interp(x_mouse, self.x, self.y)
                 self.marker1.set_data([x_mouse], [y_plot])
                 self.v_line1.set_xdata([x_mouse])
                 self.h_line1.set_ydata([y_plot])
-                self.coord_text.set_text(f'x = {x_mouse:.3f}, y = {y_plot:.3f}')
+                # self.coord_text.set_text(f'x = {x_mouse:.3f}, height = {y_plot:.3f}')
+                self.coord_text.set_text(f'x = {x_mouse:.3f}, height = {height:.3f}')
 
                 # Update speed marker
                 y_plot = np.interp(x_mouse, self.positions[:, 0], self.speeds)
@@ -142,6 +160,13 @@ class MainWindow(QMainWindow):
                 self.v_line2.set_xdata([x_mouse])
                 self.h_line2.set_ydata([y_plot])
                 self.speed_text.set_text(f'{y_plot:.3f} (m/s)')
+
+                # Update speed marker
+                y_plot = np.interp(x_mouse, self.positions[:, 0], self.accelerations)
+                self.marker3.set_data([x_mouse], [y_plot])  
+                self.v_line3.set_xdata([x_mouse])
+                self.h_line3.set_ydata([y_plot])
+                self.accel_text.set_text(f'{y_plot:.3f} (m/s²)')
 
                 self.canvas.draw_idle()
 
