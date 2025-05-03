@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):
         smooth_x = np.linspace(min(self.x), max(self.x), 200)  # 500 points for a smooth curve
         smooth_y = cubic_spline(smooth_x)
         ground, = self.canvas.axes1.plot(smooth_x, smooth_y, color="tan", label='Line', linewidth=1.0, alpha=0.2)
-        self.canvas.axes1.fill_between(smooth_x, self.canvas.axes1.get_ylim()[0], smooth_y, color="tan", alpha=0.5)
+        self.canvas.axes1.fill_between(smooth_x, self.canvas.axes1.get_ylim()[0], smooth_y, color="tan", alpha=0.2)
 
         # Plot trajectory
         self.positions = np.array(simulation.trajectory.positions)
