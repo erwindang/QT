@@ -39,6 +39,8 @@ class GroundProfile:
         self.segments = []
         self.x = []
         self.y = []
+        self.angle = [] 
+        self.radian = []
         self.res = res
         self._process_segments(segments)
 
@@ -74,6 +76,8 @@ class GroundProfile:
         intp_y = np.interp(intp_x, [segment.start_x, segment.end_x], [segment.start_y, segment.end_y])
         self.x.extend(intp_x)
         self.y.extend(intp_y)
+        self.angle.extend([segment.angle] * len(intp_x))    # Store angle for each point
+        self.radian.extend([segment.radian] * len(intp_x))  # Store radian for each point
     
     def _line_distance(self):
         return np.sum(self.segments[i].length for i in range(len(self.segments)))
