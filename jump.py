@@ -59,19 +59,21 @@ class Jump:
         if len(self.x) > 0 :
             ax = axis if axis is not None else plt
 
-            # Plot the trajectory  
-            # ax.scatter([self.takeoff_x], [self.takeoff_y], color='green', label='Takeoff Point')
-            ax.plot(self.x, self.y, label='Jump Trajectory', color = 'black', marker = None, markersize = "8", linestyle = "-", linewidth=1, alpha=0.3, antialiased = True) # Plot the trajectory       
-            # ax.plot(self.x, self.y, label='Jump Trajectory', color = 'black', marker = "+", markersize = "8", linestyle = "-", linewidth=1, alpha=0.3, antialiased = True) # Plot the trajectory       
-            ax.scatter([self.landing_x], [self.landing_y], color='red', label='Landing Point')
-            # ax.set_title(f"takeoff speed: {self.takeoff_speed:.2f} m/s")    
-            # ax.set_xlabel("X-axis")
-            # ax.set_ylabel("Y-axis")
-            # ax.axhline(0, color='black', linewidth=0.5, linestyle='--')
-            # ax.axvline(0, color='black', linewidth=0.5, linestyle='--')
-            # ax.grid(True)
-            # ax.set_aspect('equal', adjustable='box') 
-            # ax.legend()
+            if ax:
+
+                # Plot the trajectory  
+                ax.scatter([self.takeoff_x], [self.takeoff_y], color='green', label='Takeoff Point')
+                # ax.plot(self.x, self.y, label='Jump Trajectory', color = 'black', marker = None, markersize = "8", linestyle = "-", linewidth=1, alpha=0.3, antialiased = True) # Plot the trajectory       
+                ax.plot(self.x, self.y, label='Jump Trajectory', color = 'black', marker = "+", markersize = "8", linestyle = "-", linewidth=1, alpha=0.3, antialiased = True) # Plot the trajectory       
+                ax.scatter([self.landing_x], [self.landing_y], color='red', label='Landing Point')
+                ax.set_title(f"takeoff speed: {self.takeoff_speed:.2f} m/s")    
+                ax.set_xlabel("X-axis")
+                ax.set_ylabel("Y-axis")
+                ax.axhline(0, color='black', linewidth=0.5, linestyle='--')
+                ax.axvline(0, color='black', linewidth=0.5, linestyle='--')
+                ax.grid(True)
+                ax.set_aspect('equal', adjustable='box') 
+                ax.legend()
 
             if axis is None:
                 plt.show()

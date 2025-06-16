@@ -20,6 +20,8 @@ class MplCanvas(FigureCanvas):
 class MainWindow(QMainWindow):
     def __init__(self, line):
         super(MainWindow, self).__init__()
+        self.jump_plot = None
+        self.landing_marker = None
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
@@ -43,8 +45,8 @@ class MainWindow(QMainWindow):
 
         # Connect mouse events
         self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
-        self.canvas.mpl_connect('button_press_event', self.on_mouse_click)        
-
+        self.canvas.mpl_connect('button_release_event', self.on_mouse_click)        
+    
         # Add the canvas to the placeholder widget
         layout = QVBoxLayout(self.ui.plotWidget)  # Use the object name from Qt Designer
         layout.addWidget(self.canvas)
@@ -68,13 +70,33 @@ class MainWindow(QMainWindow):
             if event.xdata < max(self.line_x[:]) and event.xdata > min(self.line_x[:]):         
                 x_mouse = event.xdata  # Mouse x-coordinate
 
+                # Identify take-off
+                for i in reversed(range(len(self.takeoff_x))):
+                    if (self.takeoff_x[i] < x_mouse) :
+                        break
+
                 # Update coord marker
                 y_plot = np.interp(x_mouse, self.line_x[:], self.line_y[:])
                 self.marker1.set_data([x_mouse], [y_plot])
 
-                self.jumps[-1].set_jump_parameters(self.takeoff_x[-1], self.takeoff_y[-1], self.takeoff_angle[-1], x_mouse, y_plot)
+                self.jumps[-1].set_jump_parameters(self.takeoff_x[i], self.takeoff_y[i], self.takeoff_angle[i], x_mouse, y_plot)
 
-                self.jumps[-1].plot_jump_trajectory(axis=self.canvas.axes1)
+    # --- Clear previous jump plot and landing marker ---
+                if self.jump_plot is not None:
+                    self.jump_plot.remove()
+                    self.jump_plot = None
+                if self.landing_marker is not None:
+                    self.landing_marker.remove()
+                    self.landing_marker = None
+
+                # --- Plot new jump trajectory and landing marker ---
+                jump = self.jumps[-1]
+                self.jump_plot, = self.canvas.axes1.plot(
+                    jump.x, jump.y, label='Jump Trajectory', color='black', linestyle="-", linewidth=1, alpha=0.7, zorder=12
+                )
+                self.landing_marker = self.canvas.axes1.scatter(
+                    [jump.landing_x], [jump.landing_y], color='red', label='Landing Point', zorder=13, s=40
+                )
 
 
     def plot_graph(self):
@@ -101,11 +123,11 @@ class MainWindow(QMainWindow):
         self.canvas.draw()
 
 if __name__ == "__main__":
-    my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
+    # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (0.7,-70.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0)]
     # my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
-    # my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0),(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
+    my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0),(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
 
     my_resolution = 0.1 #meters
     drag = RideDrag()
