@@ -61,7 +61,6 @@ class TakeOff:
     def __str__(self):
         return f"TakeOff: x={self.x:.2f}, y={self.y:.2f}, speed={self.speed:.2f}"   
 
-
 class RidePhysics:
  
     @staticmethod
@@ -110,6 +109,18 @@ class RidePhysics:
 
         return new_speed, new_position, new_time, acceleration
     
+    @staticmethod
+    def compute_rolling_reversed (current_speed, current_time, segment, drag):
+        new_speed = current_speed
+        new_time = current_time + segment.length / current_speed.value
+        acceleration_x = 0.0
+        acceleration_y = 0.0 
+        acceleration_unit = set_acceleration_unit(current_speed.unit)
+        acceleration_value = sqrt(pow(acceleration_x,2) + pow(acceleration_y,2))
+        acceleration_angle = atan2(acceleration_y, acceleration_x)
+        acceleration = AccelerationVector(acceleration_value, acceleration_angle, acceleration_unit) 
+        return (new_speed, new_time, acceleration)
+     
     @staticmethod
     def compute_jump (current_speed, current_time, segment, drag, take_off):
         """
@@ -220,6 +231,11 @@ class RidePhysics:
         """
         return (speed.angle > (segment.angle + 10)) and (speed.value > 3.0)  # sp
     
+    @staticmethod
+    def is_landing(speed, take_off):
+        return False
+    
+    
 class RideTrajectory:
     def __init__(self, line, initial_speed, drag):
         self.line = line
@@ -231,8 +247,7 @@ class RideTrajectory:
         self.takeoffs = []  # Store take-off points
         self.landings = []  # Store landing points
         self.time=[0.0]  # Store time points
-        self.acceleration = [AccelerationVector(0.0, 0.0, initial_speed.unit)]  # Store acceleration vectors
-
+        self.acceleration = [AccelerationVector(0.0, 0.0, set_acceleration_unit(initial_speed.unit))]  # Store acceleration vectors
 
     def compute_trajectory(self):
         """
@@ -353,6 +368,40 @@ class RideSimulation:
 
         plt.show()
 
+class RideTrajectoryReversed :
+    def __init__(self, line, initial_speed, drag, startIndex=0):
+        self.line = line
+        self.drag = drag
+        self.state = RideState.ROLLING
+        self.speed = [initial_speed]
+        self.states = [RideState.ROLLING]  # Store states
+        self.speed = [initial_speed]  # Initial speed (SpeedVector)
+        self.positions = []  # Initial position
+        self.takeoffs = []  # Store take-off points
+        self.landings = []  # Store landing points
+        self.time=[0.0]  # Store time points
+        self.acceleration = [AccelerationVector(0.0, 0.0, set_acceleration_unit(initial_speed.unit))]  # Store acceleration vectors
+    
+    def compute_trajectory (self):         
+        
+        for i in reversed(range(len(line.x))):
+            # Get the current segment
+            current_segment = Segment(
+                self.line.x[i-1], self.line.y[i-1],
+                self.line.x[i], self.line.y[i]
+            )
+       
+            current_speed = self.speed[-1]
+            current_time = self.time[-1]
+
+            match self.state:
+
+                case RideState.ROLLING:
+
+                    new_speed, new_position, delay, acceleration = RidePhysics.compute_rolling_reversed (current_speed, current_time, current_segment, drag)
+
+                case _:
+                    pass        
 
 if __name__ == "__main__":
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]

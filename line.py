@@ -36,13 +36,14 @@ class GroundProfile:
     The line is generated with a specified resolution (res).
     """
     def __init__(self, segments, res=0.2):
-        self.segments = []
-        self.x = []
+        self.segments = [] # user segments
+        self.res = res  # resolution in meters
+        # generated x-coordinates according to segments and resolution
+        self.x = [] 
         self.y = []
         self.angle = [] 
         self.radian = []
-        self.res = res
-        self._process_segments(segments)
+        self._process_segments(segments) # generate line coordinates
 
     def _process_segments(self, segments):
         """
