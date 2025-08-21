@@ -5,8 +5,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from main_window import Ui_MainWindow
 from scipy.interpolate import CubicSpline
-from ride import RideDrag, RideTrajectoryReversed
-from line import GroundProfile
+from ride import RideDrag, ReverseRideSimulation
+from line import Line
 from jump import JumpSimulation, Jump
 
 class MplCanvas(FigureCanvas):
@@ -18,7 +18,7 @@ class MplCanvas(FigureCanvas):
         super(MplCanvas, self).__init__(fig)
 
 class MainWindow(QMainWindow):
-    def __init__(self, line):
+    def __init__(self, line, drag):
         super(MainWindow, self).__init__()
         self.jump_plot = None
         self.landing_marker = None
@@ -26,6 +26,7 @@ class MainWindow(QMainWindow):
         self.ui.setupUi(self)
 
         # Compute line
+        self.drag = drag
         self.line_x=line.x
         self.line_y=line.y
         self.line = line
@@ -77,12 +78,13 @@ class MainWindow(QMainWindow):
                 y_plot = np.interp(x_mouse, self.line_x[:], self.line_y[:])
                 self.marker1.set_data([x_mouse], [y_plot])
 
-                self.jumps[-1].set_jump_parameters(self.takeoff_x[i], self.takeoff_y[i], self.takeoff_angle[i], x_mouse, y_plot)
+                speed = self.jumps[-1].set_jump_parameters(self.takeoff_x[i], self.takeoff_y[i], self.takeoff_angle[i], x_mouse, y_plot)
                 
                 # --- Update line simulation ---
-                runIn = RideTrajectoryReversed(self.line, self.jumps[-1].takeoff_speed, RideDrag(), self.takeoff_indices[i])
-                runIn.compute_trajectory()
-
+                # run_in = ReverseRideTrajectory(self.line, self.jumps[-1].takeoff_speed, RideDrag(), self.takeoff_indices[i])
+                # run_in.compute_trajectory()
+                reverse_ride = ReverseRideSimulation(self.line, self.takeoff_indices, x_mouse, speed, self.drag)
+                reverse_ride.run()
 
                 # --- Clear previous jump plot and landing marker ---
                 if self.jump_plot is not None:
@@ -132,12 +134,13 @@ if __name__ == "__main__":
     # my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
     # my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0),(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
 
+    
     my_resolution = 0.1 #meters
     drag = RideDrag()
-    line = GroundProfile (my_segments, my_resolution) 
+    line = Line (my_segments, my_resolution) 
    
     app = QApplication(sys.argv)
-    window = MainWindow(line)
+    window = MainWindow(line, drag)
     window.plot_graph()
     window.show()
     sys.exit(app.exec_())

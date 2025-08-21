@@ -28,7 +28,7 @@ class Segment:
     def __str__(self):
         return f"Segment: start=({self.start_x:.2f}, {self.start_y:.2f}), end=({self.end_x:.2f}, {self.end_y:.2f}), length={self.length:.2f}, angle={self.angle:.2f}°"
     
-class GroundProfile:
+class Line:
     """
     Class to create a continuous line from a list of segments.
     Each segment is defined by its length and angle in degrees. 
@@ -36,7 +36,8 @@ class GroundProfile:
     The line is generated with a specified resolution (res).
     """
     def __init__(self, segments, res=0.2):
-        self.segments = [] # user segments
+        self.user_segments = [] # user segments
+        self.line_segments = [] # segments with interpolated points
         self.res = res  # resolution in meters
         # generated x-coordinates according to segments and resolution
         self.x = [] 
@@ -55,7 +56,7 @@ class GroundProfile:
             end_x = current_x + length * np.cos(radian)
             end_y = current_y + length * np.sin(radian)
             segment = Segment(current_x, current_y, end_x, end_y)
-            self.segments.append(segment)
+            self.user_segments.append(segment)
             self._interpolate_segment(segment)
             current_x, current_y = end_x, end_y
         
@@ -79,9 +80,16 @@ class GroundProfile:
         self.y.extend(intp_y)
         self.angle.extend([segment.angle] * len(intp_x))    # Store angle for each point
         self.radian.extend([segment.radian] * len(intp_x))  # Store radian for each point
-    
+
+        # Generate line segments
+        for i in range(len(intp_x) - 1):
+            self.line_segments.append(Segment(intp_x[i], intp_y[i], intp_x[i + 1], intp_y[i + 1]))
+        
+        # Add the last segment
+        self.line_segments.append(Segment(intp_x[-1], intp_y[-1], segment.end_x, segment.end_y))
+
     def _line_distance(self):
-        return np.sum(self.segments[i].length for i in range(len(self.segments)))
+        return np.sum(self.user_segments[i].length for i in range(len(self.user_segments)))
     
     def _add_noise(self, sigma=0.01):
         """
@@ -111,10 +119,10 @@ class GroundProfile:
         plt.figure(figsize=(10, 6))
         if len(self.x) > 50:
             plt.plot(self.x, self.y, 'r-', linewidth=1, alpha=0.5) 
-            for segment in self.segments:
+            for segment in self.user_segments:
                 plt.plot([segment.start_x, segment.end_x], [segment.start_y, segment.end_y], 'b+')
         else:
-            for segment in self.segments:
+            for segment in self.user_segments:
                 plt.plot([segment.start_x, segment.end_x], [segment.start_y, segment.end_y], 'bo')
             plt.plot(self.x, self.y, 'r+')
 
@@ -126,9 +134,9 @@ class GroundProfile:
 
     def __str__(self):
         """
-        String representation of the GroundProfile object.
+        String representation of the Line object.
         """
-        return f"GroundProfile: {len(self.segments)} segments, Nb.pts: {len(self.x)} total length={self._line_distance():.2f} m"
+        return f"Line: {len(self.user_segments)} segments, Nb.pts: {len(self.x)} total length={self._line_distance():.2f} m"
 
 if __name__ == "__main__":
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
@@ -138,11 +146,14 @@ if __name__ == "__main__":
     # my_segments = [(1.0, 0.0)]
     my_resolution = 0.1 #meters
     
-    my_line = GroundProfile (my_segments, my_resolution)
+    my_line = Line (my_segments, my_resolution)
     print(my_line)
 
-    for i, segment in enumerate(my_line.segments):
-        print(f"Segment {i+1}: {segment}")
+    for i, segment in enumerate(my_line.user_segments):
+        print(f"User segment {i+1}: {segment}")
+
+    for i, segment in enumerate(my_line.line_segments):
+        print(f"Line segment {i+1}: {segment}")
 
     my_line.plot(add_noise=False, noise_sigma=0.005)
 

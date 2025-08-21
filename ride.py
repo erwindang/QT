@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from enum import Enum
-from line import Segment, GroundProfile
+from line import Segment, Line
 from math import radians, sqrt, cos, sin, tan, atan2, degrees, pow
 
 class RideDrag:
@@ -23,7 +23,7 @@ class RideState(Enum):
     
     def __str__(self):
         return self.value.capitalize()  
-    
+        
 class Vector:
     def __init__(self, magnitude, angle, unit):
         self.angle = angle
@@ -43,6 +43,7 @@ class SpeedVector(Vector):
 class AccelerationVector(Vector):
     def __init__(self, acceleration, angle, unit="m/s²"):
         super().__init__(acceleration, angle, unit)
+
 
 def set_acceleration_unit(speed_unit):
     dict = {
@@ -368,46 +369,52 @@ class RideSimulation:
 
         plt.show()
 
-class RideTrajectoryReversed :
-    def __init__(self, line, initial_speed, drag, startIndex=0):
+class ReverseRideSimulation:
+    def __init__(self, line, takeoff_indices, landing_x, takeoff_speed, drag):
         self.line = line
+        self.takeoff_indices = takeoff_indices
+        self.landing_x = landing_x
+        self.takeoff_speed = takeoff_speed  
         self.drag = drag
-        self.state = RideState.ROLLING
-        self.speed = [initial_speed]
-        self.states = [RideState.ROLLING]  # Store states
-        self.speed = [initial_speed]  # Initial speed (SpeedVector)
-        self.positions = []  # Initial position
-        self.takeoffs = []  # Store take-off points
-        self.landings = []  # Store landing points
-        self.time=[0.0]  # Store time points
-        self.acceleration = [AccelerationVector(0.0, 0.0, set_acceleration_unit(initial_speed.unit))]  # Store acceleration vectors
+        self.speed = np.zeros(len(line.x))  # Speed at each x-coordinate
     
-    def compute_trajectory (self):         
-        
-        for i in reversed(range(len(line.x))):
-            # Get the current segment
-            current_segment = Segment(
-                self.line.x[i-1], self.line.y[i-1],
-                self.line.x[i], self.line.y[i]
-            )
+        # Verify landing_x is in the line
+        if landing_x < line.x[0] or landing_x > line.x[-1]:
+            raise ValueError(f"Landing x-coordinate {landing_x} is out of bounds of the line segments.")
+        else:
+            # Find the index of the landing segment
+            self.landing_index = next((i for i, x in enumerate(line.x) if x >= landing_x), len(line.x) - 1)
+            if self.landing_index == len(line.x) - 1 and line.x[self.landing_index] < landing_x:
+                self.landing_index -= 1
+
+            # Compute landing coordinates
+            self.landing_y = np.interp(self.landing_x, line.x, line.y)
+            
+            # Locate tthe take-off segment
+            self.takeoff_idx = self.find_takeoff_before_landing()
+
+    def find_takeoff_before_landing(self):
+        for idx in reversed(self.takeoff_indices):
+            if self.line.x[idx] < self.landing_x:
+                return idx
+        return 0
+    
+    def run(self):
+        """
+        Run the reverse simulation.
+        """
+        # Compute jump
+        # Done in gui2.py on_mouse_click 
+        self.speed[self.landing_index] = self.takeoff_speed.value  # Set initial speed at landing point
+        # Compute run-in
+                    
+        # Compute run-out
        
-            current_speed = self.speed[-1]
-            current_time = self.time[-1]
-
-            match self.state:
-
-                case RideState.ROLLING:
-
-                    new_speed, new_position, delay, acceleration = RidePhysics.compute_rolling_reversed (current_speed, current_time, current_segment, drag)
-
-                case _:
-                    pass        
-
 if __name__ == "__main__":
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
-    my_segments = [(0.5,0.0), (0.3,4.0), (0.3,6.0), (0.3,8.0), (0.3,11.0), (0.3,22.0), (0.3,40.0), (0.3,54.0), (1.0,0.0), (2.0,-25.0)]
+    # my_segments = [(0.5,0.0), (0.3,4.0), (0.3,6.0), (0.3,8.0), (0.3,11.0), (0.3,22.0), (0.3,40.0), (0.3,54.0), (1.0,0.0), (2.0,-25.0)]
     # my_segments = [(1.0,0.0), (1.0,-89.0), (3.0,0.0)] # step down
-    # my_segments = [(1.0,-20.0), (1.0,-8.0)]
+    my_segments = [(2.0,30.0), (8.0,-8.0)]
     # my_segments = [(1.0,-4.0)]
     # my_segments = [(1.0,0.0)]  # 1 meters flat
     # my_segments = [(10.0,0.0)]  # flat
@@ -416,9 +423,17 @@ if __name__ == "__main__":
     # my_segments = [(20.0,0.0),(20.0,0.0),(20.0,0.0),(20.0,0.0),(20.0,0.0)]  # 100 meters flat
 
     drag = RideDrag()
-    line = GroundProfile(my_segments, 0.1)  # Create a ground profile with segments and resolution
-    start_speed = SpeedVector(5, 0.0, "m/s")  # Initial speed of the rider
-    simulation = RideSimulation(line, start_speed, drag)
-    simulation.run()
-    simulation.plot()
+    my_line = Line(my_segments, 0.1)  # Create a ground profile with segments and resolution
+
+#Forward ride simulation
+    # start_speed = SpeedVector(7, 0.0, "m/s")  # Initial speed of the rider
+    # simulation = RideSimulation(my_line, start_speed, drag)
+    # simulation.run()
+    # simulation.plot()
+
+#Reverse ride simulation
+    landing_x = 4.0  # Specify the x-coordinate of the landing point
+    reverse_simulation = ReverseRideSimulation(my_line, landing_x, drag)
+    reverse_simulation.run()
+
     sys.exit(0)

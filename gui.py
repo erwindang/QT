@@ -4,7 +4,7 @@ import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QLineEdit, QMessageBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from line import GroundProfile
+from line import Line
 from ride import RideDrag, SpeedVector, RideSimulation
 from scipy.interpolate import CubicSpline
 
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     my_resolution = 0.1 #meters
     start_speed = SpeedVector(6, 0.0, "m/s")  # Initial speed of the rider
     drag = RideDrag()
-    line = GroundProfile (my_segments, my_resolution) 
+    line = Line (my_segments, my_resolution) 
     simulation = RideSimulation(line, start_speed, drag)
     simulation.run()
 

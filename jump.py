@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+from ride import SpeedVector
 
 class Jump:
     def __init__(self, takeoff_x, takeoff_y, takeoff_angle, landing_x, landing_y):
@@ -33,6 +34,8 @@ class Jump:
         self.takeoff_angle = takeoff_angle
         self.takeoff_speed = compute_takeoff_speed(landing_x, landing_y, takeoff_x, takeoff_y, takeoff_angle)
         self.compute_jump_trajectory()
+
+        return self.takeoff_speed
         
     def compute_jump_trajectory(self, res=0.1):
     #      """
@@ -49,7 +52,7 @@ class Jump:
             self.y = np.zeros_like(self.x)  # Initialize y array with zeros
             for i in range(len(self.x)): 
                 # Compute the vertical position using the jump equation
-                self.y[i] = -0.5 * 9.81 * (self.x[i] - self.takeoff_x) ** 2 / (self.takeoff_speed * np.cos(angle_radians)) ** 2 + \
+                self.y[i] = -0.5 * 9.81 * (self.x[i] - self.takeoff_x) ** 2 / (self.takeoff_speed.value * np.cos(angle_radians)) ** 2 + \
                         self.takeoff_y + (self.x[i] - self.takeoff_x) * np.tan(angle_radians)
     
     def plot_jump_trajectory(self, res=0.1, axis=None):
@@ -83,14 +86,14 @@ def compute_takeoff_speed (landing_x, landing_y, takeoff_x, takeoff_y, takeoff_a
     Compute the takeoff speed backward from the landing point.
     
     Parameters:
-    - landing_x: x-coordinate of the landing point
-    - landing_y: y-coordinate of the landing point
-    - takeoff_x: x-coordinate of the takeoff point
-    - takeoff_y: y-coordinate of the takeoff point
+    - landing_x: x-coordinate of the landing point - in meters
+    - landing_y: y-coordinate of the landing point - in meters
+    - takeoff_x: x-coordinate of the takeoff point - in meters
+    - takeoff_y: y-coordinate of the takeoff point - in meters  
     - takeoff_angle: angle of takeoff in degrees
     
     Returns:
-    - takeoff_speed: speed at takeoff
+    - takeoff_speed: speed at takeoff in m/s
     """
     # Convert angle to radians
     angle_radians = np.radians(takeoff_angle)
@@ -116,7 +119,7 @@ def compute_takeoff_speed (landing_x, landing_y, takeoff_x, takeoff_y, takeoff_a
         # Compute total takeoff speed
         takeoff_speed = np.sqrt(v_x**2 + v_y**2)   
 
-    return takeoff_speed
+    return SpeedVector(takeoff_speed,takeoff_angle,"m/s")
 
 class JumpSimulation :
     def __init__(self, line):
@@ -154,8 +157,6 @@ class JumpSimulation :
                 takeoff_indices.append(i)
 
         return takeoff_indices
-
-
 
 if __name__ == "__main__":
     # Example parameters
