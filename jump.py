@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
-from ride import SpeedVector
+from phy import SpeedVector
 
 class Jump:
     def __init__(self, takeoff_x, takeoff_y, takeoff_angle, landing_x, landing_y):

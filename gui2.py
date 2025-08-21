@@ -7,7 +7,7 @@ from main_window import Ui_MainWindow
 from scipy.interpolate import CubicSpline
 from ride import RideDrag, ReverseRideSimulation
 from line import Line
-from jump import JumpSimulation, Jump
+
 
 class MplCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
@@ -31,16 +31,6 @@ class MainWindow(QMainWindow):
         self.line_y=line.y
         self.line = line
 
-        # Find take-off indices
-        self.takeoff_indices = JumpSimulation.find_take_offs(line, angle_threshold_deg=20, radius_threshold=0.5)
-        self.takeoff_x = [self.line_x[i] for i in self.takeoff_indices]
-        self.takeoff_y = [self.line_y[i] for i in self.takeoff_indices]
-        self.takeoff_angle = [line.angle[i-1] for i in self.takeoff_indices]
-        self.takeoff_radian = [line.radian[i-1] for i in self.takeoff_indices]
-    
-        self.jumps = [Jump(self.takeoff_x[i], self.takeoff_y[i], self.takeoff_angle[i], self.takeoff_x[i], self.takeoff_y[i]) for i in range(len(self.takeoff_x))]
-        print (f"jump angles={self.takeoff_angle}")
-
         # Create a Matplotlib canvas
         self.canvas = MplCanvas(self, width=5, height=4, dpi=100)
 
@@ -53,15 +43,18 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.canvas)
 
     def on_mouse_move(self, event):
-      
         if event.inaxes:
             if event.xdata < max(self.line_x[:]) and event.xdata > min(self.line_x[:]):         
                 x_mouse = event.xdata  # Mouse x-coordinate
 
                 # Update coord marker
-                y_plot = np.interp(x_mouse, self.line_x[:], self.line_y[:])
+                y_plot = np.interp(x_mouse, self.line_x, self.line_y)
                 self.marker1.set_data([x_mouse], [y_plot])
-                
+                self.v_line1.set_xdata([x_mouse])
+                self.h_line1.set_ydata([y_plot])
+                # self.coord_text.set_text(f'x = {x_mouse:.3f}, height = {y_plot:.3f}')
+                self.line_coord_text.set_text(f'x = {x_mouse:.3f}, y = {y_plot:.3f}')
+
                 self.canvas.draw_idle()
 
     def on_mouse_click(self, event):
@@ -69,21 +62,14 @@ class MainWindow(QMainWindow):
             if event.xdata < max(self.line_x[:]) and event.xdata > min(self.line_x[:]):         
                 x_mouse = event.xdata  # Mouse x-coordinate
 
-                # Identify take-off 
-                for i in reversed(range(len(self.takeoff_x))):
-                    if (self.takeoff_x[i] < x_mouse) :
-                        break
-
                 # Update coord marker
                 y_plot = np.interp(x_mouse, self.line_x[:], self.line_y[:])
                 self.marker1.set_data([x_mouse], [y_plot])
-
-                speed = self.jumps[-1].set_jump_parameters(self.takeoff_x[i], self.takeoff_y[i], self.takeoff_angle[i], x_mouse, y_plot)
-                
+               
                 # --- Update line simulation ---
                 # run_in = ReverseRideTrajectory(self.line, self.jumps[-1].takeoff_speed, RideDrag(), self.takeoff_indices[i])
                 # run_in.compute_trajectory()
-                reverse_ride = ReverseRideSimulation(self.line, self.takeoff_indices, x_mouse, speed, self.drag)
+                reverse_ride = ReverseRideSimulation(self.line, x_mouse, self.drag)
                 reverse_ride.run()
 
                 # --- Clear previous jump plot and landing marker ---
@@ -95,14 +81,14 @@ class MainWindow(QMainWindow):
                     self.landing_marker = None
 
                 # --- Plot new jump trajectory and landing marker ---
-                jump = self.jumps[-1]
-                self.jump_plot, = self.canvas.axes1.plot(
-                    jump.x, jump.y, label='Jump Trajectory', color='black', linestyle="-", linewidth=1, alpha=0.7, zorder=12
-                )
+                #FIXMENOW
+                # jump = self.jumps[-1]
+                # self.jump_plot, = self.canvas.axes1.plot(
+                #     jump.x, jump.y, label='Jump Trajectory', color='black', linestyle="-", linewidth=1, alpha=0.7, zorder=12
+                # )
                 self.landing_marker = self.canvas.axes1.scatter(
-                    [jump.landing_x], [jump.landing_y], color='red', label='Landing Point', zorder=13, s=40
+                    x_mouse, y_plot, color='red', label='Landing Point', zorder=13, s=40
                 )
-
 
     def plot_graph(self):
 
@@ -118,12 +104,23 @@ class MainWindow(QMainWindow):
         ground, = self.canvas.axes1.plot(smooth_x, smooth_y, color="tan", label='Line', linewidth=1.0, alpha=0)
         self.canvas.axes1.fill_between(smooth_x, self.canvas.axes1.get_ylim()[0], smooth_y, color="tan", alpha=0.5)
                 
+        # Initialize marker1 and marker lines
+        self.marker1, = self.canvas.axes1.plot(self.line_x[-1], self.line_y[-1], color = "blue" ,marker='+',  markersize=20, label='Marker')
+        self.v_line1 = self.canvas.axes1.axvline(x=self.line_x[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
+        self.h_line1 = self.canvas.axes1.axhline(y=self.line_y[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
+
+        # Text for displaying coordinates
+        self.line_coord_text = self.canvas.axes1.text(0.5, 0.9, '', transform=self.canvas.axes1.transAxes, bbox=dict(facecolor='white', alpha=0))
+        self.line_coord_text.set_text(f'x: {self.line_x[-1]:.3f}  y: {self.line_y[-1]:.3f}')
+
         # Plot take-off points
-        self.canvas.axes1.scatter(self.takeoff_x, self.takeoff_y, color='blueviolet', marker='^', zorder=8, s=30, alpha=1.0)
+        # FIXMENOW
+        # self.canvas.axes1.scatter(self.takeoff_x, self.takeoff_y, color='blueviolet', marker='^', zorder=8, s=30, alpha=1.0)
         
         # InitializPe landing marker at the last take-off point
-        if self.takeoff_x:
-            self.marker1, = self.canvas.axes1.plot(self.takeoff_x[-1], self.takeoff_y[-1], color = 'darkturquoise' ,marker='v',  markersize=6, label='Marker', zorder=10, alpha=1.0)
+        # FIXMENOW
+        # if self.takeoff_x:
+        #     self.marker1, = self.canvas.axes1.plot(self.takeoff_x[-1], self.takeoff_y[-1], color = 'darkturquoise' ,marker='v',  markersize=6, label='Marker', zorder=10, alpha=1.0)
 
         self.canvas.draw()
 
