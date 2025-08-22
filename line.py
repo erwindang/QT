@@ -38,6 +38,7 @@ class Line:
     def __init__(self, segments, res=0.2):
         self.user_segments = [] # user segments
         self.line_segments = [] # segments with interpolated points
+        self.line_indices = None  # or []
         self.res = res  # resolution in meters
         # generated x-coordinates according to segments and resolution
         self.x = [] 
@@ -45,6 +46,7 @@ class Line:
         self.angle = [] 
         self.radian = []
         self._process_segments(segments) # generate line coordinates
+        self.takeoff_indices = []
 
     def _process_segments(self, segments):
         """
@@ -64,14 +66,13 @@ class Line:
         # self.x.append(current_x)
         # self.y.append(current_y)    
     
-        
     def _interpolate_segment(self, segment):
         """
         Interpolate the segment to create points at the specified resolution.       
         The points are added to the line_x and line_y lists.
         """
-        res = self.res*cos(np.radians(segment.angle))
-
+        start_idx = len(self.x)    # index for user segment numbering    
+        res = self.res*cos(np.radians(segment.angle)) # compute resolution depending on segment angle 
         intp_x = np.arange(segment.start_x, segment.end_x, res)
         if intp_x[-1] >= segment.end_x:
             intp_x = intp_x[:-1]  # Remove the last point if it exceeds end_x
@@ -79,7 +80,11 @@ class Line:
         self.x.extend(intp_x)
         self.y.extend(intp_y)
         self.angle.extend([segment.angle] * len(intp_x))    # Store angle for each point
-        self.radian.extend([segment.radian] * len(intp_x))  # Store radian for each point
+        self.radian.extend([segment.radian] * len(intp_x)
+                           )  # Store radian for each point
+        end_idx = len(self.x) - 1
+        # Assign indices to the segment
+        segment.line_indices = list(range(start_idx, end_idx + 1))
 
         # Generate line segments
         for i in range(len(intp_x) - 1):
@@ -132,6 +137,62 @@ class Line:
         plt.grid(True)
         plt.show()
 
+    def find_takeoffs(self, angle_threshold_deg=15, radius_threshold=1.0, distance_threshold=2.0):
+        """
+        Detect jump take-offs using both angle change and radius of curvature,
+        and filter so that no two take-offs are closer than distance_threshold.
+        Only negative angle changes and concave (downward) curvature are considered.
+        Returns a list of indices in self.x/self.y.
+        """
+        takeoff_indices = []
+
+        # Angle threshold method: only negative angle difference
+        for i in range(1, len(self.angle)):
+            angle_diff = self.angle[i] - self.angle[i-1]
+            if angle_diff < -angle_threshold_deg and angle_diff < 0:
+                takeoff_indices.append(i)
+
+        # Radius of curvature method: only concave (downward) curvature
+        def radius_of_curvature_and_sign(x1, y1, x2, y2, x3, y3):
+            a = np.hypot(x2 - x1, y2 - y1)
+            b = np.hypot(x3 - x2, y3 - y2)
+            c = np.hypot(x1 - x3, y1 - y3)
+            s = (a + b + c) / 2
+            area = np.sqrt(max(s * (s - a) * (s - b) * (s - c), 0))
+            if area == 0:
+                return np.inf, 0
+            radius = (a * b * c) / (4 * area)
+            # Compute sign of curvature using cross product (z-component)
+            v1 = np.array([x2 - x1, y2 - y1])
+            v2 = np.array([x3 - x2, y3 - y2])
+            cross = v1[0]*v2[1] - v1[1]*v2[0]
+            sign = np.sign(cross)
+            return radius, sign
+
+        for i in range(1, len(self.x) - 1):
+            r, sign = radius_of_curvature_and_sign(
+                self.x[i-1], self.y[i-1],
+                self.x[i], self.y[i],
+                self.x[i+1], self.y[i+1]
+            )
+            # sign < 0 means concave downward (jump possible)
+            if r < radius_threshold and sign < 0:
+                takeoff_indices.append(i)
+
+        # Remove duplicates and sort
+        takeoff_indices = sorted(set(takeoff_indices))
+
+        # Apply distance threshold: keep only the first takeoff if two are too close
+        filtered_indices = []
+        last_x = None
+        for idx in takeoff_indices:
+            if last_x is None or abs(self.x[idx] - last_x) >= distance_threshold:
+                filtered_indices.append(idx)
+                last_x = self.x[idx]
+            # else: skip this takeoff because it's too close to the previous one
+
+        return filtered_indices
+
     def __str__(self):
         """
         String representation of the Line object.
@@ -140,7 +201,7 @@ class Line:
 
 if __name__ == "__main__":
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
-    my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,0.0), (2.0,-17.0), (1.0,0.0)]
+    my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,0.0), (2.0,-17.0), (1.0,-16.0), (0,5, -14.0), (0.5,-8.0), (0.5,-4.0), (0.5,0.0)]
     # my_segments = [(1.0,-20.0), (1.0,-8.0), (1.0,0.0)]
     # my_segments = [(1.0,-4.0)]
     # my_segments = [(1.0, 0.0)]

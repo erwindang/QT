@@ -8,7 +8,6 @@ from scipy.interpolate import CubicSpline
 from ride import RideDrag, ReverseRideSimulation
 from line import Line
 
-
 class MplCanvas(FigureCanvas):
     def __init__(self, parent=None, width=5, height=4, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
@@ -30,6 +29,7 @@ class MainWindow(QMainWindow):
         self.line_x=line.x
         self.line_y=line.y
         self.line = line
+        self.takeoff_indices = line.find_takeoffs()
 
         # Create a Matplotlib canvas
         self.canvas = MplCanvas(self, width=5, height=4, dpi=100)
@@ -42,19 +42,34 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(self.ui.plotWidget)  # Use the object name from Qt Designer
         layout.addWidget(self.canvas)
 
-    def on_mouse_move(self, event):
-        if event.inaxes:
-            if event.xdata < max(self.line_x[:]) and event.xdata > min(self.line_x[:]):         
-                x_mouse = event.xdata  # Mouse x-coordinate
+    def get_user_segment_number(self, line_idx):
+        """
+        Returns the user segment number for a given line index.
+        Assumes self.line.user_segments is a list of Segment objects.
+        """
+        for seg_num, seg in enumerate(self.line.user_segments):
+            # Check if the line index falls within this segment's interpolated indices
+            if hasattr(seg, 'line_indices') and line_idx in seg.line_indices:
+                return seg_num
+        # Fallback: estimate by position
+        return None
 
-                # Update coord marker
+    def on_mouse_move(self, event):
+       if event.inaxes:
+            if event.xdata < max(self.line_x[:]) and event.xdata > min(self.line_x[:]):
+                x_mouse = event.xdata
                 y_plot = np.interp(x_mouse, self.line_x, self.line_y)
                 self.marker1.set_data([x_mouse], [y_plot])
                 self.v_line1.set_xdata([x_mouse])
                 self.h_line1.set_ydata([y_plot])
-                # self.coord_text.set_text(f'x = {x_mouse:.3f}, height = {y_plot:.3f}')
-                self.line_coord_text.set_text(f'x = {x_mouse:.3f}, y = {y_plot:.3f}')
-
+                # Find nearest index
+                idx = np.abs(np.array(self.line_x) - x_mouse).argmin()
+                angle = self.line.angle[idx] if hasattr(self.line, 'angle') else 0
+                segment_num = self.get_user_segment_number(idx)
+                self.line_coord_text.set_text(
+                    f'Segment: {segment_num}  Index: {idx}  Angle: {angle:.2f}°\n'
+                    f'x = {x_mouse:.3f}, y = {y_plot:.3f}'
+                )
                 self.canvas.draw_idle()
 
     def on_mouse_click(self, event):
@@ -110,11 +125,25 @@ class MainWindow(QMainWindow):
         self.h_line1 = self.canvas.axes1.axhline(y=self.line_y[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
 
         # Text for displaying coordinates
-        self.line_coord_text = self.canvas.axes1.text(0.5, 0.9, '', transform=self.canvas.axes1.transAxes, bbox=dict(facecolor='white', alpha=0))
-        self.line_coord_text.set_text(f'x: {self.line_x[-1]:.3f}  y: {self.line_y[-1]:.3f}')
+        # After initializing marker1 and marker lines
+        line_idx = self.line_x.index(self.line_x[-1])
+        angle = self.line.angle[line_idx] if hasattr(self.line, 'angle') else 0
+        segment_num = self.get_user_segment_number(line_idx)
+        self.line_coord_text = self.canvas.axes1.text(
+            0.5, 0.9,
+            f'Segment: {segment_num}  Index: {line_idx}  Angle: {angle:.2f}°',
+            transform=self.canvas.axes1.transAxes,
+            bbox=dict(facecolor='white', alpha=0)
+        )
+        # self.line_coord_text = self.canvas.axes1.text(0.5, 0.9, '', transform=self.canvas.axes1.transAxes, bbox=dict(facecolor='white', alpha=0))
+        # self.line_coord_text.set_text(f'x: {self.line_x[-1]:.3f}  y: {self.line_y[-1]:.3f}')
 
         # Plot take-off points
         # FIXMENOW
+        takeoff_x = [self.line_x[i] for i in self.takeoff_indices]
+        takeoff_y = [self.line_y[i] for i in self.takeoff_indices]
+        self.canvas.axes1.scatter(takeoff_x, takeoff_y, color='blueviolet', marker='^', zorder=8, s=30, alpha=1.0, label='Take-offs')
+
         # self.canvas.axes1.scatter(self.takeoff_x, self.takeoff_y, color='blueviolet', marker='^', zorder=8, s=30, alpha=1.0)
         
         # InitializPe landing marker at the last take-off point
@@ -125,7 +154,7 @@ class MainWindow(QMainWindow):
         self.canvas.draw()
 
 if __name__ == "__main__":
-    my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
+    my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (0.5,-15.0), (0.5,-10.0), (0.5,-6.0), (2.0,-3.0), (1.0,0.0)]
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (0.7,-70.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0)]
     # my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]

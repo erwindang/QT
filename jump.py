@@ -126,37 +126,7 @@ class JumpSimulation :
         self.line = line
         self.jumps = []
         self.take_offs = []
-    
-    def find_take_offs(line, angle_threshold_deg=10, radius_threshold=0):
-        """
-        Detect take-off points where the angle change exceeds a threshold or the radius of curvature is below a threshold.
 
-        Args:
-            line: An object with .x and .y attributes (arrays of coordinates).
-            angle_threshold_deg: Angle change threshold in degrees.
-            radius_threshold: Minimum radius of curvature.
-
-        Returns:
-            List of indices where take-off is detected.
-        """
-        x = np.array(line.x)
-        y = np.array(line.y)
-        takeoff_indices = []
-
-        # Compute segment angles
-        dx = np.diff(x)
-        dy = np.diff(y)
-        segment_angles = np.degrees(np.arctan2(dy, dx))
-
-        # Compute angle change
-        angle_change = np.diff(segment_angles)
-
-        # Compute radius of curvature
-        for i in range(1, len(x) - 1):
-            if angle_change[i - 1] < - angle_threshold_deg :
-                takeoff_indices.append(i)
-
-        return takeoff_indices
 
 if __name__ == "__main__":
     # Example parameters
