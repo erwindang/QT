@@ -66,9 +66,8 @@ class MainWindow(QMainWindow):
                 idx = np.abs(np.array(self.line_x) - x_mouse).argmin()
                 angle = self.line.angle[idx] if hasattr(self.line, 'angle') else 0
                 segment_num = self.get_user_segment_number(idx)
-                self.line_coord_text.set_text(
-                    f'Segment: {segment_num}  Index: {idx}  Angle: {angle:.2f}°\n'
-                    f'x = {x_mouse:.3f}, y = {y_plot:.3f}'
+                self.canvas.axes1.set_title(f'segment: {segment_num}  index: {idx}  angle: {angle:.2f}°  coord: {x_mouse:.3f}, {y_plot:.3f}',
+                    fontsize=10, pad=15
                 )
                 self.canvas.draw_idle()
 
@@ -124,32 +123,19 @@ class MainWindow(QMainWindow):
         self.v_line1 = self.canvas.axes1.axvline(x=self.line_x[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
         self.h_line1 = self.canvas.axes1.axhline(y=self.line_y[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
 
-        # Text for displaying coordinates
-        # After initializing marker1 and marker lines
+        # Displaying segment data and marker coordinates
         line_idx = self.line_x.index(self.line_x[-1])
         angle = self.line.angle[line_idx] if hasattr(self.line, 'angle') else 0
         segment_num = self.get_user_segment_number(line_idx)
-        self.line_coord_text = self.canvas.axes1.text(
-            0.5, 0.9,
-            f'Segment: {segment_num}  Index: {line_idx}  Angle: {angle:.2f}°',
-            transform=self.canvas.axes1.transAxes,
-            bbox=dict(facecolor='white', alpha=0)
-        )
-        # self.line_coord_text = self.canvas.axes1.text(0.5, 0.9, '', transform=self.canvas.axes1.transAxes, bbox=dict(facecolor='white', alpha=0))
-        # self.line_coord_text.set_text(f'x: {self.line_x[-1]:.3f}  y: {self.line_y[-1]:.3f}')
-
+        x_marker = self.line_x[-1]
+        y_marker = self.line_y[-1]
+        self.canvas.axes1.set_title(f'segment: {segment_num}  index: {line_idx}  angle: {angle:.2f}°  coord: {x_marker:.3f}, {y_marker:.3f}',
+            fontsize=10, pad=15)
+    
         # Plot take-off points
-        # FIXMENOW
         takeoff_x = [self.line_x[i] for i in self.takeoff_indices]
         takeoff_y = [self.line_y[i] for i in self.takeoff_indices]
         self.canvas.axes1.scatter(takeoff_x, takeoff_y, color='blueviolet', marker='^', zorder=8, s=30, alpha=1.0, label='Take-offs')
-
-        # self.canvas.axes1.scatter(self.takeoff_x, self.takeoff_y, color='blueviolet', marker='^', zorder=8, s=30, alpha=1.0)
-        
-        # InitializPe landing marker at the last take-off point
-        # FIXMENOW
-        # if self.takeoff_x:
-        #     self.marker1, = self.canvas.axes1.plot(self.takeoff_x[-1], self.takeoff_y[-1], color = 'darkturquoise' ,marker='v',  markersize=6, label='Marker', zorder=10, alpha=1.0)
 
         self.canvas.draw()
 

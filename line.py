@@ -38,7 +38,7 @@ class Line:
     def __init__(self, segments, res=0.2):
         self.user_segments = [] # user segments
         self.line_segments = [] # segments with interpolated points
-        self.line_indices = None  # or []
+        self.line_indices = []
         self.res = res  # resolution in meters
         # generated x-coordinates according to segments and resolution
         self.x = [] 
