@@ -343,65 +343,39 @@ class RideSimulation:
 
         plt.show()
 
-class ReverseRideSimulation:
+class ReverseRideSimulation:  
     def __init__(self, line, landing_x, drag):
         self.line = line
         self.landing_x = landing_x
         self.drag = drag
-        self.speed = np.zeros(len(line.x))  # Speed at each x-coordinate
-    
-        # Find all jump take-offs in the line
-        # FIXMENOW
-        # Find take-off indices
-        self.takeoff_indices = JumpSimulation.find_take_offs(line, angle_threshold_deg=20, radius_threshold=0.5)
-        self.takeoff_x = [self.line_x[i] for i in self.takeoff_indices]
-        self.takeoff_y = [self.line_y[i] for i in self.takeoff_indices]
-        self.takeoff_angle = [line.angle[i-1] for i in self.takeoff_indices]
-        self.takeoff_radian = [line.radian[i-1] for i in self.takeoff_indices]
-    
-        self.jumps = [Jump(self.takeoff_x[i], self.takeoff_y[i], self.takeoff_angle[i], self.takeoff_x[i], self.takeoff_y[i]) for i in range(len(self.takeoff_x))]
-        print (f"jump angles={self.takeoff_angle}")
-
-        # Identify take-off
-        #FIXMENOW
-        for i in reversed(range(len(self.takeoff_x))):
-            if (self.takeoff_x[i] < landing_x) :
-                break
-
-        # # Verify landing_x is in the line
-        # #FIXMENOW
-        # if landing_x < line.x[0] or landing_x > line.x[-1]:
-        #     raise ValueError(f"Landing x-coordinate {landing_x} is out of bounds of the line segments.")
-        # else:
-        # #FIXMENOW
-        #     # Find the index of the landing segment
-        #     self.landing_index = next((i for i, x in enumerate(line.x) if x >= landing_x), len(line.x) - 1)
-        #     if self.landing_index == len(line.x) - 1 and line.x[self.landing_index] < landing_x:
-        #         self.landing_index -= 1
-
-        #     # Compute landing coordinates
-        #     self.landing_y = np.interp(self.landing_x, line.x, line.y)
-            
-        #     # Locate tthe take-off segment
-        #     self.takeoff_idx = self.find_takeoff_before_landing()
+        self.speeds = np.zeros(len(line.x))  # Speed at each x-coordinate
+        self.ride_y = np.zeros(len(line.x))
 
     def find_takeoff_before_landing(self):
-        for idx in reversed(self.takeoff_indices):
+        for idx in reversed(self.line.takeoff_indices):
             if self.line.x[idx] < self.landing_x:
-                return idx
+                return idx-1
         return 0
     
+    def find_landing_y(self):
+        landing_y = np.interp(self.landing_x, self.line.x[:], self.line.y[:])
+        return landing_y
+
     def run(self):
         """
         Run the reverse simulation.
         """
         # Compute jump
-        # self.takeoff_speed = self.jumps[-1].set_jump_parameters(self.takeoff_x[i], self.takeoff_y[i], self.takeoff_angle[i], x_mouse, y_plot)
-    
-
+        self.landing_y = self.find_landing_y()
+        self.takeoff_idx = self.find_takeoff_before_landing()
+        self.main_jump = Jump(self.line.x[self.takeoff_idx], self.line.y[self.takeoff_idx], 
+                         self.line.angle[self.takeoff_idx], 
+                         self.landing_x, self.landing_y)
+        
         # Compute run-in
-                    
+
         # Compute run-out
+
        
 if __name__ == "__main__":
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]

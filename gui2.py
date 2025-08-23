@@ -42,6 +42,41 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(self.ui.plotWidget)  # Use the object name from Qt Designer
         layout.addWidget(self.canvas)
 
+    def plot_graph(self):
+
+        # Clear the previous plot
+        self.canvas.axes1.clear()
+        self.canvas.axes2.clear()
+        self.canvas.axes3.clear()
+
+        # Plot line profile with smoothing
+        cubic_spline = CubicSpline(self.line_x, self.line_y)
+        smooth_x = np.linspace(min(self.line_x), max(self.line_x), 200)  # 500 points for a smooth curve
+        smooth_y = cubic_spline(smooth_x)
+        ground, = self.canvas.axes1.plot(smooth_x, smooth_y, color="tan", label='Line', linewidth=1.0, alpha=0)
+        self.canvas.axes1.fill_between(smooth_x, self.canvas.axes1.get_ylim()[0], smooth_y, color="tan", alpha=0.5)
+                
+        # Initialize marker1 and marker lines
+        self.marker1, = self.canvas.axes1.plot(self.line_x[-1], self.line_y[-1], color = "blue" ,marker='+',  markersize=20, label='Marker')
+        self.v_line1 = self.canvas.axes1.axvline(x=self.line_x[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
+        self.h_line1 = self.canvas.axes1.axhline(y=self.line_y[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
+
+        # Displaying segment data and marker coordinates
+        line_idx = self.line_x.index(self.line_x[-1])
+        angle = self.line.angle[line_idx] if hasattr(self.line, 'angle') else 0
+        segment_num = self.get_user_segment_number(line_idx)
+        x_marker = self.line_x[-1]
+        y_marker = self.line_y[-1]
+        self.canvas.axes1.set_title(f'segment: {segment_num}  index: {line_idx}  angle: {angle:.2f}°  coord: {x_marker:.3f}, {y_marker:.3f}',
+            fontsize=10, pad=15)
+    
+        # Plot take-off points
+        takeoff_x = [self.line_x[i] for i in self.takeoff_indices]
+        takeoff_y = [self.line_y[i] for i in self.takeoff_indices]
+        self.canvas.axes1.scatter(takeoff_x, takeoff_y, color='blueviolet', marker='^', zorder=8, s=40, alpha=1.0, label='Take-offs')
+
+        self.canvas.draw()
+
     def get_user_segment_number(self, line_idx):
         """
         Returns the user segment number for a given line index.
@@ -76,15 +111,13 @@ class MainWindow(QMainWindow):
             if event.xdata < max(self.line_x[:]) and event.xdata > min(self.line_x[:]):         
                 x_mouse = event.xdata  # Mouse x-coordinate
 
+                # --- Update line simulation ---
+                self.ride = ReverseRideSimulation(self.line, x_mouse, self.drag)
+                self.ride.run()
+
                 # Update coord marker
                 y_plot = np.interp(x_mouse, self.line_x[:], self.line_y[:])
                 self.marker1.set_data([x_mouse], [y_plot])
-               
-                # --- Update line simulation ---
-                # run_in = ReverseRideTrajectory(self.line, self.jumps[-1].takeoff_speed, RideDrag(), self.takeoff_indices[i])
-                # run_in.compute_trajectory()
-                reverse_ride = ReverseRideSimulation(self.line, x_mouse, self.drag)
-                reverse_ride.run()
 
                 # --- Clear previous jump plot and landing marker ---
                 if self.jump_plot is not None:
@@ -93,51 +126,37 @@ class MainWindow(QMainWindow):
                 if self.landing_marker is not None:
                     self.landing_marker.remove()
                     self.landing_marker = None
+                if hasattr(self, "main_takeoff_marker") and self.main_takeoff_marker is not None:
+                    self.main_takeoff_marker.remove()
+                    self.main_takeoff_marker = None
 
-                # --- Plot new jump trajectory and landing marker ---
-                #FIXMENOW
-                # jump = self.jumps[-1]
-                # self.jump_plot, = self.canvas.axes1.plot(
-                #     jump.x, jump.y, label='Jump Trajectory', color='black', linestyle="-", linewidth=1, alpha=0.7, zorder=12
-                # )
-                self.landing_marker = self.canvas.axes1.scatter(
-                    x_mouse, y_plot, color='red', label='Landing Point', zorder=13, s=40
-                )
+                # --- Plot jump trajectory if available ---
+                if hasattr(self, 'ride') and hasattr(self.ride, 'main_jump') and self.ride.main_jump is not None:
+                    jump_x = getattr(self.ride.main_jump, 'x', None)
+                    jump_y = getattr(self.ride.main_jump, 'y', None)
+                    if jump_x is not None and jump_y is not None:
+                        self.jump_plot, = self.canvas.axes1.plot(
+                            jump_x, jump_y, color='red', linestyle='--', linewidth=1, alpha=0.7, label='Jump Trajectory', zorder=12
+                            )
+                    # --- Plot landing point ---
+                    landing_x = getattr(self.ride.main_jump, 'landing_x', None)
+                    landing_y = getattr(self.ride.main_jump, 'landing_y', None)
+                    if landing_x is not None and landing_y is not None:
+                        self.landing_marker = self.canvas.axes1.scatter(
+                            [landing_x], [landing_y], color='red', marker='o', label='Landing Point', zorder=13, s=40
+                        )
+                    
+                    # --- Plot takeoff point ---
+                    takeoff_x = getattr(self.ride.main_jump, 'takeoff_x', None)
+                    takeoff_y = getattr(self.ride.main_jump, 'takeoff_y', None)
+                    if takeoff_x is not None and takeoff_y is not None:
+                        self.main_takeoff_marker = self.canvas.axes1.scatter(
+                            [takeoff_x], [takeoff_y], color='red', marker='^', label='Takeoff Point', zorder=14, s=40
+                        )
 
-    def plot_graph(self):
+                self.canvas.draw()                
+                # self.canvas.draw_idle()
 
-        # Clear the previous plot
-        self.canvas.axes1.clear()
-        self.canvas.axes2.clear()
-        self.canvas.axes3.clear()
-
-        # Plot line profile with smoothing
-        cubic_spline = CubicSpline(self.line_x, self.line_y)
-        smooth_x = np.linspace(min(self.line_x), max(self.line_x), 200)  # 500 points for a smooth curve
-        smooth_y = cubic_spline(smooth_x)
-        ground, = self.canvas.axes1.plot(smooth_x, smooth_y, color="tan", label='Line', linewidth=1.0, alpha=0)
-        self.canvas.axes1.fill_between(smooth_x, self.canvas.axes1.get_ylim()[0], smooth_y, color="tan", alpha=0.5)
-                
-        # Initialize marker1 and marker lines
-        self.marker1, = self.canvas.axes1.plot(self.line_x[-1], self.line_y[-1], color = "blue" ,marker='+',  markersize=20, label='Marker')
-        self.v_line1 = self.canvas.axes1.axvline(x=self.line_x[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
-        self.h_line1 = self.canvas.axes1.axhline(y=self.line_y[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
-
-        # Displaying segment data and marker coordinates
-        line_idx = self.line_x.index(self.line_x[-1])
-        angle = self.line.angle[line_idx] if hasattr(self.line, 'angle') else 0
-        segment_num = self.get_user_segment_number(line_idx)
-        x_marker = self.line_x[-1]
-        y_marker = self.line_y[-1]
-        self.canvas.axes1.set_title(f'segment: {segment_num}  index: {line_idx}  angle: {angle:.2f}°  coord: {x_marker:.3f}, {y_marker:.3f}',
-            fontsize=10, pad=15)
-    
-        # Plot take-off points
-        takeoff_x = [self.line_x[i] for i in self.takeoff_indices]
-        takeoff_y = [self.line_y[i] for i in self.takeoff_indices]
-        self.canvas.axes1.scatter(takeoff_x, takeoff_y, color='blueviolet', marker='^', zorder=8, s=30, alpha=1.0, label='Take-offs')
-
-        self.canvas.draw()
 
 if __name__ == "__main__":
     my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (0.5,-15.0), (0.5,-10.0), (0.5,-6.0), (2.0,-3.0), (1.0,0.0)]

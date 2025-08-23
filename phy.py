@@ -13,7 +13,7 @@ class Vector:
 
 class SpeedVector(Vector):
     def __init__(self, speed, angle, unit="m/s"):
-        super().__init__(speed, angle, unit)
+        super().__init__(speed, angle)
 
     def __str__(self):
             return f"SpeedVector: {self.value:.2f} {self.unit}, Angle: {self.angle:.2f}°"

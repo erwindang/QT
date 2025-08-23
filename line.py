@@ -46,7 +46,7 @@ class Line:
         self.angle = [] 
         self.radian = []
         self._process_segments(segments) # generate line coordinates
-        self.takeoff_indices = []
+        self.takeoff_indices = self.find_takeoffs() # find takeoff indices
 
     def _process_segments(self, segments):
         """
