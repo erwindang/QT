@@ -55,7 +55,10 @@ class MainWindow(QMainWindow):
         smooth_y = cubic_spline(smooth_x)
         ground, = self.canvas.axes1.plot(smooth_x, smooth_y, color="tan", label='Line', linewidth=1.0, alpha=0)
         self.canvas.axes1.fill_between(smooth_x, self.canvas.axes1.get_ylim()[0], smooth_y, color="tan", alpha=0.5)
-                
+        self.canvas.axes1.set_ylabel("Line profile (m)")
+        self.canvas.axes2.set_ylabel("Speed (m/s)")
+        self.canvas.axes3.set_ylabel("Acceleration (m/s²)")
+
         # Initialize marker1 and marker lines
         self.marker1, = self.canvas.axes1.plot(self.line_x[-1], self.line_y[-1], color = "blue" ,marker='+',  markersize=20, label='Marker')
         self.v_line1 = self.canvas.axes1.axvline(x=self.line_x[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
@@ -167,11 +170,10 @@ class MainWindow(QMainWindow):
                             speed_values = jump_speed
                         self.canvas.axes2.clear()
                         self.canvas.axes2.plot(jump_x, speed_values, color='cornflowerblue', linestyle='-', linewidth=1, alpha=0.0)
-                        self.canvas.axes2.plot(jump_x, speed_values_x, color='white', linestyle='--', linewidth=1, alpha=1)
-                        self.canvas.axes2.plot(jump_x, speed_values_y, color='orange', linestyle='--', linewidth=1, alpha=1)
+                        self.canvas.axes2.plot(jump_x, speed_values_x, color='white', linestyle='--', linewidth=0.7, alpha=1)
+                        self.canvas.axes2.plot(jump_x, speed_values_y, color='grey', linestyle='--', linewidth=0.7, alpha=0.3)
                         self.canvas.axes2.fill_between(jump_x, speed_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
                         self.canvas.axes2.set_ylabel("Speed (m/s)")
-                        self.canvas.axes2.legend()
                
                 self.canvas.draw()                
                 # self.canvas.draw_idle()
