@@ -73,7 +73,7 @@ class MainWindow(QMainWindow):
         # Plot take-off points
         takeoff_x = [self.line_x[i] for i in self.takeoff_indices]
         takeoff_y = [self.line_y[i] for i in self.takeoff_indices]
-        self.canvas.axes1.scatter(takeoff_x, takeoff_y, color='blueviolet', marker='^', zorder=8, s=40, alpha=1.0, label='Take-offs')
+        self.canvas.axes1.scatter(takeoff_x, takeoff_y, color='blueviolet', marker='^', zorder=8, s=60, alpha=1.0, label='Take-offs')
 
         self.canvas.draw()
 
@@ -112,8 +112,9 @@ class MainWindow(QMainWindow):
                 x_mouse = event.xdata  # Mouse x-coordinate
 
                 # --- Update line simulation ---
-                self.ride = ReverseRideSimulation(self.line, x_mouse, self.drag)
-                self.ride.run()
+                if len(self.line.takeoff_indices) > 0 and x_mouse > self.line.x[self.line.takeoff_indices[0]] : 
+                    self.ride = ReverseRideSimulation(self.line, x_mouse, self.drag)
+                    self.ride.run()
 
                 # Update coord marker
                 y_plot = np.interp(x_mouse, self.line_x[:], self.line_y[:])
@@ -134,16 +135,17 @@ class MainWindow(QMainWindow):
                 if hasattr(self, 'ride') and hasattr(self.ride, 'main_jump') and self.ride.main_jump is not None:
                     jump_x = getattr(self.ride.main_jump, 'x', None)
                     jump_y = getattr(self.ride.main_jump, 'y', None)
+                    jump_speed = getattr(self.ride.main_jump, 'speed', None)
                     if jump_x is not None and jump_y is not None:
                         self.jump_plot, = self.canvas.axes1.plot(
-                            jump_x, jump_y, color='red', linestyle='--', linewidth=1, alpha=0.7, label='Jump Trajectory', zorder=12
+                            jump_x, jump_y, color='red', linestyle='--', linewidth=1, alpha=0.4, label='Jump Trajectory', zorder=12
                             )
                     # --- Plot landing point ---
                     landing_x = getattr(self.ride.main_jump, 'landing_x', None)
                     landing_y = getattr(self.ride.main_jump, 'landing_y', None)
                     if landing_x is not None and landing_y is not None:
                         self.landing_marker = self.canvas.axes1.scatter(
-                            [landing_x], [landing_y], color='red', marker='o', label='Landing Point', zorder=13, s=40
+                            [landing_x], [landing_y], color='red', marker='o', label='Landing Point', zorder=13, s=20
                         )
                     
                     # --- Plot takeoff point ---
@@ -151,9 +153,25 @@ class MainWindow(QMainWindow):
                     takeoff_y = getattr(self.ride.main_jump, 'takeoff_y', None)
                     if takeoff_x is not None and takeoff_y is not None:
                         self.main_takeoff_marker = self.canvas.axes1.scatter(
-                            [takeoff_x], [takeoff_y], color='red', marker='^', label='Takeoff Point', zorder=14, s=40
+                            [takeoff_x], [takeoff_y], color='red', marker='^', label='Takeoff Point', zorder=14, s=60
                         )
-
+                    
+                    # --- Plot jump speed on axes2 ---
+                    if jump_x is not None and jump_speed is not None:
+                        # If speed is a list of objects, extract the value attribute
+                        if hasattr(jump_speed[0], 'value'):
+                            speed_values_x = [s.x_value for s in jump_speed]
+                            speed_values_y = [s.y_value for s in jump_speed]
+                            speed_values = [s.value for s in jump_speed]
+                        else:
+                            speed_values = jump_speed
+                        self.canvas.axes2.clear()
+                        self.canvas.axes2.plot(jump_x, speed_values_x, color='green', linestyle='--', linewidth=1, alpha=0.4)
+                        self.canvas.axes2.plot(jump_x, speed_values_y, color='orange', linestyle='--', linewidth=1, alpha=0.7)
+                        self.canvas.axes2.plot(jump_x, speed_values, color='red', linestyle='-', linewidth=1, alpha=0.4)
+                        self.canvas.axes2.set_ylabel("Speed (m/s)")
+                        self.canvas.axes2.legend()
+               
                 self.canvas.draw()                
                 # self.canvas.draw_idle()
 

@@ -1,5 +1,12 @@
 from math import radians, cos, sin
 
+class gravity_const:
+    def __init__(self):
+        self.value = 9.81
+        self.unit = "m/s²"
+
+g = gravity_const()
+
 class Vector:
     def __init__(self, magnitude, angle):
         self.angle = angle

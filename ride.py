@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from enum import Enum
 from line import Segment, Line
 from math import radians, sqrt, cos, sin, tan, atan2, degrees, pow
-from jump import JumpSimulation, Jump
+from jump import Jump
 from phy import SpeedVector, AccelerationVector, set_acceleration_unit
 
 class RideDrag:
@@ -373,6 +373,7 @@ class ReverseRideSimulation:
                          self.landing_x, self.landing_y)
         
         # Compute run-in
+
 
         # Compute run-out
 

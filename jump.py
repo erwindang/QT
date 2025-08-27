@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
-from phy import SpeedVector
+from phy import SpeedVector, g
 
 class Jump:
     def __init__(self, takeoff_x, takeoff_y, takeoff_angle, landing_x, landing_y):
@@ -13,30 +13,7 @@ class Jump:
         self.takeoff_speed = self.compute_takeoff_speed()
         self.landing_speed = self.compute_landing_speed()
         self.compute_jump_trajectory()
-        
    
-    def set_jump_parameters(self, takeoff_x, takeoff_y, takeoff_angle, landing_x, landing_y):
-        """
-        Set the jump parameters for the jump trajectory.
-        
-        Parameters:
-        - takeoff_x: x-coordinate of the takeoff point
-        - takeoff_y: y-coordinate of the takeoff point
-        - takeoff_angle: angle of takeoff in degrees
-        - landing_x: x-coordinate of the landing point
-        - landing_y: y-coordinate of the landing point
-        """
-        self.takeoff_x = takeoff_x
-        self.takeoff_y = takeoff_y
-        self.landing_x = landing_x
-        self.landing_y = landing_y
-        self.takeoff_angle = takeoff_angle
-        self.takeoff_speed = self.compute_takeoff_speed()
-        self.compute_jump_trajectory()
-        self.landing_speed = self.compute_landing_speed()
-
-        return self.takeoff_speed
-      
     def compute_landing_speed(self):
         return SpeedVector(5,-15,"m/s")
 
@@ -53,13 +30,40 @@ class Jump:
             # Compute the trajectory points
             self.x = np.linspace(self.takeoff_x, self.landing_x, int(dx/res))
             self.y = np.zeros_like(self.x)  # Initialize y array with zeros
+            self.speed = [None] * len(self.x)  # <-- Initialize speed array here
             for i in range(len(self.x)): 
                 # Compute the vertical position using the jump equation
                 self.y[i] = -0.5 * 9.81 * (self.x[i] - self.takeoff_x) ** 2 / (self.takeoff_speed.value * np.cos(angle_radians)) ** 2 + \
                         self.takeoff_y + (self.x[i] - self.takeoff_x) * np.tan(angle_radians)
+                self.speed[i] = self.compute_speed_at_dx(self.x[i] - self.takeoff_x)
         
-        return self.x, self.y
+        return self.x, self.y, self.speed
     
+    def compute_speed_at_dx(self, delta_x):
+        """
+        Compute the speed at a given x-coordinate along the jump trajectory.
+        
+        Parameters:
+        - delta_x: x-coordinate along the jump trajectory - in meters
+        
+        Returns:
+        - speed: SpeedVector at the given x-coordinate
+        """
+        max_jump_distance = self.landing_x - self.takeoff_x
+        
+         # Acceleration due to gravity
+        if delta_x == 0:
+            return self.takeoff_speed
+        elif delta_x > 0 and delta_x <= max_jump_distance :
+            v_x = self.takeoff_speed.value * np.cos(np.radians(self.takeoff_angle))
+            v_y = -g.value * delta_x / v_x + self.takeoff_speed.value * np.sin(np.radians(self.takeoff_angle))
+            speed_magnitude = np.sqrt(v_x**2 + v_y**2)   
+            speed_angle = np.degrees(np.arctan2(v_y, v_x))
+            return SpeedVector(speed_magnitude, speed_angle)
+        else :
+            print("jump.compute_speed_at_dx: dx is out of bounds of the jump trajectory.")
+            return None        
+
     def plot_jump_trajectory(self, res=0.1, axis=None):
         """
         Plot the jump trajectory based on the, takeoff and landing points.
@@ -74,7 +78,7 @@ class Jump:
                 # ax.plot(self.x, self.y, label='Jump Trajectory', color = 'black', marker = None, markersize = "8", linestyle = "-", linewidth=1, alpha=0.3, antialiased = True) # Plot the trajectory       
                 ax.plot(self.x, self.y, label='Jump Trajectory', color = 'black', marker = "+", markersize = "8", linestyle = "-", linewidth=1, alpha=0.3, antialiased = True) # Plot the trajectory       
                 ax.scatter([self.landing_x], [self.landing_y], color='red', label='Landing Point')
-                ax.set_title(f"takeoff speed: {self.takeoff_speed:.2f} m/s")    
+                ax.set_title(f"takeoff speed: {self.takeoff_speed.value:.2f} m/s")    
                 ax.set_xlabel("X-axis")
                 ax.set_ylabel("Y-axis")
                 ax.axhline(0, color='black', linewidth=0.5, linestyle='--')
@@ -129,19 +133,13 @@ class Jump:
 
         return SpeedVector(takeoff_speed,self.takeoff_angle)
 
-class JumpSimulation :
-    def __init__(self, line):
-        self.line = line
-        self.jumps = []
-        self.take_offs = []
-
 if __name__ == "__main__":
     # Example parameters
     landing_x = 2.5  # x-coordinate of the landing point
     landing_y = 0   # y-coordinate of the landing point
     takeoff_x = 0   # x-coordinate of the takeoff point
     takeoff_y = 1   # y-coordinate of the takeoff point
-    takeoff_angle =  -5  # angle of takeoff in degrees
+    takeoff_angle =  30  # angle of takeoff in degrees
 
     fig, ax = plt.subplots()
 
