@@ -15,7 +15,7 @@ class Jump:
         self.compute_jump_trajectory()
    
     def compute_landing_speed(self):
-        return SpeedVector(5,-15,"m/s")
+        return self.compute_speed_at_dx(self.landing_x - self.takeoff_x)
 
     def compute_jump_trajectory(self, res=0.1):
     #      """
@@ -61,8 +61,8 @@ class Jump:
             speed_angle = np.degrees(np.arctan2(v_y, v_x))
             return SpeedVector(speed_magnitude, speed_angle)
         else :
-            print("jump.compute_speed_at_dx: dx is out of bounds of the jump trajectory.")
-            return None        
+            print("! jump.compute_speed_at_dx: dx is out of bounds of the jump trajectory.")
+            return SpeedVector(0, 0)        
 
     def plot_jump_trajectory(self, res=0.1, axis=None):
         """

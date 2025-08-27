@@ -166,9 +166,10 @@ class MainWindow(QMainWindow):
                         else:
                             speed_values = jump_speed
                         self.canvas.axes2.clear()
-                        self.canvas.axes2.plot(jump_x, speed_values_x, color='green', linestyle='--', linewidth=1, alpha=0.4)
-                        self.canvas.axes2.plot(jump_x, speed_values_y, color='orange', linestyle='--', linewidth=1, alpha=0.7)
-                        self.canvas.axes2.plot(jump_x, speed_values, color='red', linestyle='-', linewidth=1, alpha=0.4)
+                        self.canvas.axes2.plot(jump_x, speed_values, color='cornflowerblue', linestyle='-', linewidth=1, alpha=0.0)
+                        self.canvas.axes2.plot(jump_x, speed_values_x, color='white', linestyle='--', linewidth=1, alpha=1)
+                        self.canvas.axes2.plot(jump_x, speed_values_y, color='orange', linestyle='--', linewidth=1, alpha=1)
+                        self.canvas.axes2.fill_between(jump_x, speed_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
                         self.canvas.axes2.set_ylabel("Speed (m/s)")
                         self.canvas.axes2.legend()
                
