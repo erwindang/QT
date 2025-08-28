@@ -20,6 +20,10 @@ class MainWindow(QMainWindow):
     def __init__(self, line, drag):
         super(MainWindow, self).__init__()
         self.jump_plot = None
+        self.run_in_plot = None
+        self.run_in_speed_plot = None
+        self.ride = None
+        self.marker1 = None
         self.landing_marker = None
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -134,6 +138,7 @@ class MainWindow(QMainWindow):
                     self.main_takeoff_marker.remove()
                     self.main_takeoff_marker = None
 
+
                 # --- Plot jump trajectory if available ---
                 if hasattr(self, 'ride') and hasattr(self.ride, 'main_jump') and self.ride.main_jump is not None:
                     jump_x = getattr(self.ride.main_jump, 'x', None)
@@ -150,7 +155,7 @@ class MainWindow(QMainWindow):
                         self.landing_marker = self.canvas.axes1.scatter(
                             [landing_x], [landing_y], color='red', marker='o', label='Landing Point', zorder=13, s=20
                         )
-                    
+            
                     # --- Plot takeoff point ---
                     takeoff_x = getattr(self.ride.main_jump, 'takeoff_x', None)
                     takeoff_y = getattr(self.ride.main_jump, 'takeoff_y', None)
@@ -158,7 +163,16 @@ class MainWindow(QMainWindow):
                         self.main_takeoff_marker = self.canvas.axes1.scatter(
                             [takeoff_x], [takeoff_y], color='red', marker='^', label='Takeoff Point', zorder=14, s=60
                         )
-                    
+
+                    # --- Plot run-in ---
+                    if self.run_in_plot is not None:
+                        self.run_in_plot.remove()
+                        self.run_in_plot = None
+                    run_in_x = getattr(self.ride, 'run_in_x', None)
+                    run_in_y = getattr(self.ride, 'run_in_y', None)
+                    if run_in_x is not None and run_in_y is not None:
+                        self.run_in_plot, = self.canvas.axes1.plot(run_in_x, run_in_y, color='blueviolet', linestyle='--', linewidth=1, alpha=0.8, label='Run-in Trajectory', zorder=12)
+
                     # --- Plot jump speed on axes2 ---
                     if jump_x is not None and jump_speed is not None:
                         # If speed is a list of objects, extract the value attribute
@@ -170,11 +184,21 @@ class MainWindow(QMainWindow):
                             speed_values = jump_speed
                         self.canvas.axes2.clear()
                         self.canvas.axes2.plot(jump_x, speed_values, color='cornflowerblue', linestyle='-', linewidth=1, alpha=0.0)
-                        self.canvas.axes2.plot(jump_x, speed_values_x, color='white', linestyle='--', linewidth=0.7, alpha=1)
-                        self.canvas.axes2.plot(jump_x, speed_values_y, color='grey', linestyle='--', linewidth=0.7, alpha=0.3)
+                        self.canvas.axes2.plot(jump_x, speed_values_x, color='white', linestyle='-', linewidth=0.7, alpha=1)
+                        self.canvas.axes2.plot(jump_x, speed_values_y, color='grey', linestyle='-', linewidth=0.7, alpha=0.3)
                         self.canvas.axes2.fill_between(jump_x, speed_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
                         self.canvas.axes2.set_ylabel("Speed (m/s)")
-               
+                    
+                    # --- PLot run-in speed
+                    # if self.run_in_speed_plot is not None:
+                    #     self.run_in_speed_plot.remove()
+                    #     self.run_in_speed_plot = None
+                    run_in_x = getattr(self.ride, 'run_in_x', None)
+                    if run_in_x is not None:
+                        run_in_speeds_values = [s.value for s in self.ride.run_in_speeds]   
+                        self.run_in_speed_plot, = self.canvas.axes2.plot(run_in_x, run_in_speeds_values, color='blueviolet', linestyle='--', linewidth=1, alpha=0.0, label='Run-in Speed', zorder=12)
+                        self.canvas.axes2.fill_between(run_in_x, run_in_speeds_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
+
                 self.canvas.draw()                
                 # self.canvas.draw_idle()
 
@@ -186,7 +210,6 @@ if __name__ == "__main__":
     # my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
     # my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0),(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
 
-    
     my_resolution = 0.1 #meters
     drag = RideDrag()
     line = Line (my_segments, my_resolution) 

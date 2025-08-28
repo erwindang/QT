@@ -85,16 +85,42 @@ class RidePhysics:
         return new_speed, new_position, new_time, acceleration
     
     @staticmethod
-    def compute_rolling_reversed (current_speed, current_time, segment, drag):
-        new_speed = current_speed
-        new_time = current_time + segment.length / current_speed.value
-        acceleration_x = 0.0
-        acceleration_y = 0.0 
-        acceleration_unit = set_acceleration_unit(current_speed.unit)
-        acceleration_value = sqrt(pow(acceleration_x,2) + pow(acceleration_y,2))
-        acceleration_angle = atan2(acceleration_y, acceleration_x)
-        acceleration = AccelerationVector(acceleration_value, acceleration_angle, acceleration_unit) 
-        return (new_speed, new_time, acceleration)
+    def rolling_speed_reversed (current_speed_value, delta_x, angle, drag, speed_unit):
+        if delta_x == 0:
+            return current_speed_value
+        elif delta_x > 0:
+            g = 9.80665   # gravity m.s-2
+            val = 2*g*(np.sin(radians(angle)) - drag.Mu_roll_drag*np.cos(radians(angle)))*delta_x + np.power(current_speed_value,2)
+            divider = drag.Mu_roll_drag*delta_x-1
+            if divider == 0.0:
+                print (f"rolling_speed_reversed division by zero for delta_x {delta_x}. Set speed to 0")
+                new_speed_value = 0.0
+            else:
+                try:
+                    new_speed_value = sqrt(abs(val/divider))
+                except ValueError:
+                    print (f"rolling_speed_reversed speed error {val} for delta_x {delta_x}. Set speed to 0")
+                    new_speed_value = 0.0
+            return new_speed_value
+        else :
+            print("! rolling_speed_reversed: delta_x is negative.")
+            return 0.0
+
+    @staticmethod
+   
+    def compute_rolling_reversed (current_speed_vector, segment, drag):
+        projected_speed = current_speed_vector.projected_speed (segment.angle)
+        new_speed_value = RidePhysics.rolling_speed_reversed (projected_speed.value, segment.length, segment.angle, drag, current_speed_vector.unit)
+        new_speed_vector = SpeedVector(new_speed_value, segment.degree, current_speed_vector.unit)
+        # new_time = current_time - segment.length / projected_speed.value if projected_speed.value != 0 else float('inf')
+        # acceleration_x = (current_speed_vector.x_value - new_speed.x_value) / (current_time - new_time) if new_time != current_time else 0.0
+        # acceleration_y = (current_speed_vector.y_value - new_speed.y_value) / (current_time - new_time) if new_time != current_time else 0.0
+        # acceleration_unit = set_acceleration_unit(current_speed_vector.unit)        
+        # acceleration_value = sqrt(pow(acceleration_x,2) + pow(acceleration_y,2))
+        # acceleration_angle = degrees(np.atan2(acceleration_y, acceleration_x)) if new_time !=  current_time else 0.0
+        # acceleration = AccelerationVector(acceleration_value, acceleration_angle, acceleration_unit)        
+        # return (new_speed, new_time, acceleration)
+        return (new_speed_vector)
      
     @staticmethod
     def compute_jump (current_speed, current_time, segment, drag, take_off):
@@ -193,6 +219,7 @@ class RidePhysics:
         return speed_vector, position, delay, acceleration
     
     @staticmethod
+    #FIXME: take_off detection implementation can be replaced by find_takeoffs function in line.py
     def is_take_off(speed, segment):
         """
         Detect if the rider is jumping based on speed and angle.
@@ -205,11 +232,6 @@ class RidePhysics:
             bool: True if jumping, False otherwise.
         """
         return (speed.angle > (segment.angle + 10)) and (speed.value > 3.0)  # sp
-    
-    @staticmethod
-    def is_landing(speed, take_off):
-        return False
-    
     
 class RideTrajectory:
     def __init__(self, line, initial_speed, drag):
@@ -360,6 +382,19 @@ class ReverseRideSimulation:
     def find_landing_y(self):
         landing_y = np.interp(self.landing_x, self.line.x[:], self.line.y[:])
         return landing_y
+    
+    def run_in (self, takeoff_idx, takeoff_speed):
+        run_in_x = self.line.x[:takeoff_idx]
+        run_in_y = self.line.y[:takeoff_idx]
+        speeds = [None] * takeoff_idx
+        current_speed = takeoff_speed
+        speeds[takeoff_idx-1] = takeoff_speed
+        for i in reversed(range(1, takeoff_idx)):
+            segment = self.line.line_segments[i-1]           
+            new_speed = RidePhysics.compute_rolling_reversed(current_speed, segment, self.drag)
+            current_speed = new_speed
+            speeds[i-1] = new_speed 
+        return run_in_x, run_in_y, speeds
 
     def run(self):
         """
@@ -373,7 +408,7 @@ class ReverseRideSimulation:
                          self.landing_x, self.landing_y)
         
         # Compute run-in
-
+        self.run_in_x, self.run_in_y, self.run_in_speeds = self.run_in(self.takeoff_idx,self.main_jump.takeoff_speed)
 
         # Compute run-out
 
