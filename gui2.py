@@ -87,7 +87,7 @@ class MainWindow(QMainWindow):
         self.canvas.axes1.set_title(f'segment: {segment_num}  index: {line_idx}  angle: {angle:.2f}°  coord: {x_marker:.3f}, {y_marker:.3f}',
             fontsize=10, pad=15)
     
-        self.set_speed_title(0, 'm/s', True)
+        self.set_speed_title(0.0, 'km/h', True)
 
         # Plot take-off points
         takeoff_x = [self.line_x[i] for i in self.takeoff_indices]
@@ -108,20 +108,20 @@ class MainWindow(QMainWindow):
         # Fallback: estimate by position
         return None
 
-    def set_speed_title(self, speed, unit="m/s", draw=True):
-        if unit == "m/s" or unit == "m.s-1":
+    def set_speed_title(self, speed_ms, display_unit="m/s", draw=True):
+        if display_unit == "m/s" or display_unit == "m.s-1":
             unit = "m/s"
-            self.canvas.axes2.set_title(f'speed: {speed:.2f} {unit:s} - {speed * 3.6:.2f} km/h', fontsize=10, pad=15)
-        elif unit == "km/h" or unit == "km.h-1":
+            self.canvas.axes2.set_title(f'speed: {speed_ms:.2f} {unit:s}', fontsize=10, pad=15)
+        elif display_unit == "km/h" or display_unit == "km.h-1" or display_unit == "kph":
             unit = "km/h"
-            self.canvas.axes2.set_title(f'speed: {speed:.2f} {unit:s} - {speed / 3.6:.2f} m/s', fontsize=10, pad=15)
-        elif unit == "mph":
+            self.canvas.axes2.set_title(f'speed: {speed_ms*3.6:.2f} {unit:s}  {speed_ms:.2f} m/s', fontsize=10, pad=15)
+        elif display_unit == "mph":
             unit = "mph"
-            self.canvas.axes2.set_title(f'speed: {speed:.2f} {unit:s} - {speed * 1.60934:.2f} km/h - {speed * 0.44704:.2f} m/s', fontsize=10, pad=15)
+            self.canvas.axes2.set_title(f'speed: {speed_ms * 2,23694:.2f} {unit:s}  {speed_ms:.2f} m/s', fontsize=10, pad=15)
         else:
             unit = unit
-            self.canvas.axes2.set_title(f'speed: {speed:.2f} {unit:s}', fontsize=10, pad=15)
-            
+            self.canvas.axes2.set_title(f'speed: {speed_ms:.2f} {unit:s}', fontsize=10, pad=15)
+
         if draw : self.canvas.draw_idle()
     
     def on_mouse_move(self, event):
@@ -142,13 +142,13 @@ class MainWindow(QMainWindow):
                         self.marker2.set_data([x_mouse], [marker_y])
                         self.v_line2.set_xdata([x_mouse])
                         self.h_line2.set_ydata([marker_y])
+                        self.set_speed_title(marker_y, 'km/h', False)
                     elif x_mouse >= min(self.run_in_x) and x_mouse <= max(self.run_in_x):
                         marker_y = np.interp(x_mouse, self.run_in_x, [s.value for s in self.ride.run_in_speeds])
                         self.marker2.set_data([x_mouse], [marker_y])
                         self.v_line2.set_xdata([x_mouse])
                         self.h_line2.set_ydata([marker_y])
-                    
-                    self.set_speed_title(marker_y, 'm/s', False)
+                        self.set_speed_title(marker_y, 'km/h', False)
 
                 # Find nearest index
                 idx = np.abs(np.array(self.line_x) - x_mouse).argmin()
@@ -192,12 +192,13 @@ class MainWindow(QMainWindow):
                     if self.jump_x is not None and self.jump_y is not None:
                         self.jump_plot, = self.canvas.axes1.plot(
                             self.jump_x, self.jump_y, color='red', linestyle='--', linewidth=1, alpha=0.4, label='Jump Trajectory', zorder=12)
+                    
                     # --- Plot landing point ---
                     landing_x = getattr(self.ride.main_jump, 'landing_x', None)
                     landing_y = getattr(self.ride.main_jump, 'landing_y', None)
                     if landing_x is not None and landing_y is not None:
                         self.landing_marker = self.canvas.axes1.scatter(
-                            [landing_x], [landing_y], color='red', marker='o', label='Landing Point', zorder=13, s=20
+                            [landing_x], [landing_y], color='red', marker='o', label='Landing Point', zorder=13, s=40
                         )
             
                     # --- Plot takeoff point ---
@@ -205,7 +206,7 @@ class MainWindow(QMainWindow):
                     takeoff_y = getattr(self.ride.main_jump, 'takeoff_y', None)
                     if takeoff_x is not None and takeoff_y is not None:
                         self.main_takeoff_marker = self.canvas.axes1.scatter(
-                            [takeoff_x], [takeoff_y], color='red', marker='^', label='Takeoff Point', zorder=14, s=60
+                            [takeoff_x], [takeoff_y], color='red', marker='^', label='Takeoff Point', zorder=14, s=80
                         )
 
                     # --- Plot run-in ---
@@ -231,10 +232,10 @@ class MainWindow(QMainWindow):
                             self.jump_speed_plot.remove()
                             self.jump_speed_plot = None
 
-                        self.jump_speed_plot, = self.canvas.axes2.plot(self.jump_x, self.jump_speed_values, color='red', linestyle='-', linewidth=1, alpha=0.7)
+                        self.jump_speed_plot, = self.canvas.axes2.plot(self.jump_x, self.jump_speed_values, color='red', linestyle='-', linewidth=0.5, alpha=0.7)
                         # self.canvas.axes2.plot(jump_x, speed_values_x, color='grey', linestyle='-', linewidth=0.7, alpha=0.3)
                         # self.canvas.axes2.plot(jump_x, speed_values_y, color='grey', linestyle='-', linewidth=0.7, alpha=0.3)
-                        # self.canvas.axes2.fill_between(jump_x, jump_speed_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
+                        # self.canvas.axes2.fill_between(self.jump_x, self.jump_speed_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
                     
                     # --- PLot run-in speed
                     if self.run_in_speed_plot is not None:
@@ -243,7 +244,7 @@ class MainWindow(QMainWindow):
                     self.run_in_x = getattr(self.ride, 'run_in_x', None)
                     if self.run_in_x is not None:
                         run_in_speeds_values = [s.value for s in self.ride.run_in_speeds]   
-                        self.run_in_speed_plot, = self.canvas.axes2.plot(self.run_in_x, run_in_speeds_values, color='blueviolet', linestyle='-', linewidth=0.7, alpha=0.7, label='Run-in Speed', zorder=12)
+                        self.run_in_speed_plot, = self.canvas.axes2.plot(self.run_in_x, run_in_speeds_values, color='blueviolet', linestyle='-', linewidth=0.5, alpha=0.7, label='Run-in Speed', zorder=12)
                         # self.canvas.axes2.fill_between(self.run_in_x, run_in_speeds_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)                        
 
                     # --- Update speed marker ---
@@ -264,6 +265,21 @@ class MainWindow(QMainWindow):
                 self.canvas.draw()                
                 # self.canvas.draw_idle()
 
+class ApplicationParams:
+    def __init__(self):
+        self.drag = None
+        self.unit = "m/s"
+        self.display_unit = "km/h"
+        self.resolution = 0.1
+        self.rider = None
+        self.activity = "mountain bike"
+        self.equipment = "bike"
+
+class Rider:
+    def __init__(self, weight_kg=75, height_cm=175, position="standing"):       
+        self.weight_kg = weight_kg
+        self.height_cm = height_cm
+        self.level = "expert"
 
 if __name__ == "__main__":
     my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (0.5,-15.0), (0.5,-10.0), (0.5,-6.0), (2.0,-3.0), (1.0,0.0)]
@@ -273,6 +289,8 @@ if __name__ == "__main__":
     # my_segments = [(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0),(1.0,0.0), (0.5,4.0), (0.5,6.0), (0.5,8.0), (0.5,11.0), (0.5,22.0), (0.5,40.0), (0.5,54.0), (1.5,-3.0), (0.5,-7.0), (0.5,-11.0), (2.0,-17.0), (0.5,-8.0), (0.5,0.0)]
 
     my_resolution = 0.1 #meters
+    params = ApplicationParams()
+    rider = Rider()
     drag = RideDrag()
     line = Line (my_segments, my_resolution) 
    
