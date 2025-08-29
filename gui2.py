@@ -183,10 +183,10 @@ class MainWindow(QMainWindow):
                         else:
                             speed_values = jump_speed
                         self.canvas.axes2.clear()
-                        self.canvas.axes2.plot(jump_x, speed_values, color='cornflowerblue', linestyle='-', linewidth=1, alpha=0.0)
-                        self.canvas.axes2.plot(jump_x, speed_values_x, color='white', linestyle='-', linewidth=0.7, alpha=1)
-                        self.canvas.axes2.plot(jump_x, speed_values_y, color='grey', linestyle='-', linewidth=0.7, alpha=0.3)
-                        self.canvas.axes2.fill_between(jump_x, speed_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
+                        self.canvas.axes2.plot(jump_x, speed_values, color='red', linestyle='-', linewidth=1, alpha=0.7)
+                        # self.canvas.axes2.plot(jump_x, speed_values_x, color='grey', linestyle='-', linewidth=0.7, alpha=0.3)
+                        # self.canvas.axes2.plot(jump_x, speed_values_y, color='grey', linestyle='-', linewidth=0.7, alpha=0.3)
+                        # self.canvas.axes2.fill_between(jump_x, speed_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
                         self.canvas.axes2.set_ylabel("Speed (m/s)")
                     
                     # --- PLot run-in speed
@@ -196,8 +196,8 @@ class MainWindow(QMainWindow):
                     run_in_x = getattr(self.ride, 'run_in_x', None)
                     if run_in_x is not None:
                         run_in_speeds_values = [s.value for s in self.ride.run_in_speeds]   
-                        self.run_in_speed_plot, = self.canvas.axes2.plot(run_in_x, run_in_speeds_values, color='blueviolet', linestyle='--', linewidth=1, alpha=0.0, label='Run-in Speed', zorder=12)
-                        self.canvas.axes2.fill_between(run_in_x, run_in_speeds_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
+                        self.run_in_speed_plot, = self.canvas.axes2.plot(run_in_x, run_in_speeds_values, color='blueviolet', linestyle='-', linewidth=0.7, alpha=0.7, label='Run-in Speed', zorder=12)
+                        # self.canvas.axes2.fill_between(run_in_x, run_in_speeds_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
 
                 self.canvas.draw()                
                 # self.canvas.draw_idle()
