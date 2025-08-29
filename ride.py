@@ -110,7 +110,7 @@ class RidePhysics:
    
     def compute_rolling_reversed (current_speed_vector, segment, drag):
         angle_diff = abs(current_speed_vector.angle - segment.degree)
-        if angle_diff > 20:
+        if angle_diff > 20  :
             projected_speed = current_speed_vector.projected_speed (segment.angle)
         else:
             projected_speed = current_speed_vector

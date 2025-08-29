@@ -22,8 +22,16 @@ class MainWindow(QMainWindow):
         self.jump_plot = None
         self.run_in_plot = None
         self.run_in_speed_plot = None
+        self.jump_speed_plot = None
+        self.adjustSizejump_speed_plot = None
         self.ride = None
         self.marker1 = None
+        self.v_line1 = None
+        self.h_line1 = None
+        self.marker2 = None
+        self.v_line2 = None
+        self.h_line2 = None
+        self.main_takeoff_marker = None
         self.landing_marker = None
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -65,8 +73,8 @@ class MainWindow(QMainWindow):
 
         # Initialize marker1 and marker lines
         self.marker1, = self.canvas.axes1.plot(self.line_x[-1], self.line_y[-1], color = "blue" ,marker='+',  markersize=20, label='Marker')
-        self.v_line1 = self.canvas.axes1.axvline(x=self.line_x[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
-        self.h_line1 = self.canvas.axes1.axhline(y=self.line_y[-1], color='blue', linestyle='-', linewidth=1, alpha=0.2)
+        self.v_line1 = self.canvas.axes1.axvline(x=self.line_x[-1], color='black', linestyle='-', linewidth=1, alpha=0.2)
+        self.h_line1 = self.canvas.axes1.axhline(y=self.line_y[-1], color='black', linestyle='-', linewidth=1, alpha=0.2)
 
         # Displaying segment data and marker coordinates
         line_idx = self.line_x.index(self.line_x[-1])
@@ -100,10 +108,26 @@ class MainWindow(QMainWindow):
        if event.inaxes:
             if event.xdata < max(self.line_x[:]) and event.xdata > min(self.line_x[:]):
                 x_mouse = event.xdata
+
+                # --- Update line marker ---
                 y_plot = np.interp(x_mouse, self.line_x, self.line_y)
                 self.marker1.set_data([x_mouse], [y_plot])
                 self.v_line1.set_xdata([x_mouse])
                 self.h_line1.set_ydata([y_plot])
+
+                # --- Update speed marker ---
+                if self.marker2 is not None:
+                    if x_mouse >= min(self.jump_x) and x_mouse <= max(self.jump_x):
+                        marker_y = np.interp(x_mouse, self.jump_x, self.jump_speed_values)
+                        self.marker2.set_data([x_mouse], [marker_y])
+                        self.v_line2.set_xdata([x_mouse])
+                        self.h_line2.set_ydata([marker_y])
+                    elif x_mouse >= min(self.run_in_x) and x_mouse <= max(self.run_in_x):
+                        marker_y = np.interp(x_mouse, self.run_in_x, [s.value for s in self.ride.run_in_speeds])
+                        self.marker2.set_data([x_mouse], [marker_y])
+                        self.v_line2.set_xdata([x_mouse])
+                        self.h_line2.set_ydata([marker_y])
+
                 # Find nearest index
                 idx = np.abs(np.array(self.line_x) - x_mouse).argmin()
                 angle = self.line.angle[idx] if hasattr(self.line, 'angle') else 0
@@ -138,16 +162,14 @@ class MainWindow(QMainWindow):
                     self.main_takeoff_marker.remove()
                     self.main_takeoff_marker = None
 
-
                 # --- Plot jump trajectory if available ---
                 if hasattr(self, 'ride') and hasattr(self.ride, 'main_jump') and self.ride.main_jump is not None:
-                    jump_x = getattr(self.ride.main_jump, 'x', None)
-                    jump_y = getattr(self.ride.main_jump, 'y', None)
+                    self.jump_x = getattr(self.ride.main_jump, 'x', None)
+                    self.jump_y = getattr(self.ride.main_jump, 'y', None)
                     jump_speed = getattr(self.ride.main_jump, 'speed', None)
-                    if jump_x is not None and jump_y is not None:
+                    if self.jump_x is not None and self.jump_y is not None:
                         self.jump_plot, = self.canvas.axes1.plot(
-                            jump_x, jump_y, color='red', linestyle='--', linewidth=1, alpha=0.4, label='Jump Trajectory', zorder=12
-                            )
+                            self.jump_x, self.jump_y, color='red', linestyle='--', linewidth=1, alpha=0.4, label='Jump Trajectory', zorder=12)
                     # --- Plot landing point ---
                     landing_x = getattr(self.ride.main_jump, 'landing_x', None)
                     landing_y = getattr(self.ride.main_jump, 'landing_y', None)
@@ -168,37 +190,52 @@ class MainWindow(QMainWindow):
                     if self.run_in_plot is not None:
                         self.run_in_plot.remove()
                         self.run_in_plot = None
-                    run_in_x = getattr(self.ride, 'run_in_x', None)
-                    run_in_y = getattr(self.ride, 'run_in_y', None)
-                    if run_in_x is not None and run_in_y is not None:
-                        self.run_in_plot, = self.canvas.axes1.plot(run_in_x, run_in_y, color='blueviolet', linestyle='--', linewidth=1, alpha=0.8, label='Run-in Trajectory', zorder=12)
+                    self.run_in_x = getattr(self.ride, 'run_in_x', None)
+                    self.run_in_y = getattr(self.ride, 'run_in_y', None)
+                    if self.run_in_x is not None and self.run_in_y is not None:
+                        self.run_in_plot, = self.canvas.axes1.plot(self.run_in_x, self.run_in_y, color='blueviolet', linestyle='--', linewidth=1, alpha=0.8, label='Run-in Trajectory', zorder=12)
 
                     # --- Plot jump speed on axes2 ---
-                    if jump_x is not None and jump_speed is not None:
+                    if self.jump_x is not None and jump_speed is not None:
                         # If speed is a list of objects, extract the value attribute
                         if hasattr(jump_speed[0], 'value'):
-                            speed_values_x = [s.x_value for s in jump_speed]
-                            speed_values_y = [s.y_value for s in jump_speed]
-                            speed_values = [s.value for s in jump_speed]
+                            # speed_values_x = [s.x_value for s in jump_speed]
+                            # speed_values_y = [s.y_value for s in jump_speed]
+                            self.jump_speed_values = [s.value for s in jump_speed]
                         else:
-                            speed_values = jump_speed
-                        self.canvas.axes2.clear()
-                        self.canvas.axes2.plot(jump_x, speed_values, color='red', linestyle='-', linewidth=1, alpha=0.7)
+                            self.jump_speed_values = [None] * len(self.jump_x)
+
+                        if self.jump_speed_plot is not None:
+                            self.jump_speed_plot.remove()
+                            self.jump_speed_plot = None
+
+                        self.jump_speed_plot, = self.canvas.axes2.plot(self.jump_x, self.jump_speed_values, color='red', linestyle='-', linewidth=1, alpha=0.7)
                         # self.canvas.axes2.plot(jump_x, speed_values_x, color='grey', linestyle='-', linewidth=0.7, alpha=0.3)
                         # self.canvas.axes2.plot(jump_x, speed_values_y, color='grey', linestyle='-', linewidth=0.7, alpha=0.3)
-                        # self.canvas.axes2.fill_between(jump_x, speed_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
-                        self.canvas.axes2.set_ylabel("Speed (m/s)")
+                        # self.canvas.axes2.fill_between(jump_x, jump_speed_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
                     
                     # --- PLot run-in speed
-                    # if self.run_in_speed_plot is not None:
-                    #     self.run_in_speed_plot.remove()
-                    #     self.run_in_speed_plot = None
-                    run_in_x = getattr(self.ride, 'run_in_x', None)
-                    if run_in_x is not None:
+                    if self.run_in_speed_plot is not None:
+                        self.run_in_speed_plot.remove()
+                        self.run_in_speed_plot = None
+                    self.run_in_x = getattr(self.ride, 'run_in_x', None)
+                    if self.run_in_x is not None:
                         run_in_speeds_values = [s.value for s in self.ride.run_in_speeds]   
-                        self.run_in_speed_plot, = self.canvas.axes2.plot(run_in_x, run_in_speeds_values, color='blueviolet', linestyle='-', linewidth=0.7, alpha=0.7, label='Run-in Speed', zorder=12)
-                        # self.canvas.axes2.fill_between(run_in_x, run_in_speeds_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)
+                        self.run_in_speed_plot, = self.canvas.axes2.plot(self.run_in_x, run_in_speeds_values, color='blueviolet', linestyle='-', linewidth=0.7, alpha=0.7, label='Run-in Speed', zorder=12)
+                        # self.canvas.axes2.fill_between(self.run_in_x, run_in_speeds_values, self.canvas.axes2.get_ylim()[0], color='cornflowerblue', alpha=0.2)                        
 
+                    # --- Update speed marker ---
+                    if x_mouse >= min(self.jump_x) and x_mouse <= max(self.jump_x):
+                        marker_x = x_mouse
+                        marker_y = np.interp(x_mouse, self.jump_x, self.jump_speed_values)
+                        if self.marker2 is None:
+                            self.marker2, = self.canvas.axes2.plot(marker_x, marker_y, color='black', marker='+', markersize=20, label='Speed Marker', zorder=15)
+                            self.v_line2 = self.canvas.axes2.axvline(marker_x, color='black', linestyle='-', linewidth=1, alpha=0.2)
+                            self.h_line2 = self.canvas.axes2.axhline(marker_y, color='black', linestyle='-', linewidth=1, alpha=0.2)
+                    else:
+                        self.marker2.set_data([x_mouse], [marker_y])
+                        self.v_line2.set_xdata([x_mouse])
+                        self.h_line2.set_ydata([marker_y])
                 self.canvas.draw()                
                 # self.canvas.draw_idle()
 
