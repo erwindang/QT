@@ -14,15 +14,15 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1075, 724)
+        MainWindow.resize(1421, 963)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.plotWidget = QtWidgets.QWidget(self.centralwidget)
-        self.plotWidget.setGeometry(QtCore.QRect(10, 10, 931, 601))
+        self.plotWidget.setGeometry(QtCore.QRect(0, 0, 1421, 941))
         self.plotWidget.setObjectName("plotWidget")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1075, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1421, 21))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)

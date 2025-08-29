@@ -14,6 +14,8 @@ class MplCanvas(FigureCanvas):
         self.axes1 = fig.add_subplot(311)
         self.axes2 = fig.add_subplot(312, sharex=self.axes1)
         self.axes3 = fig.add_subplot(313, sharex=self.axes1)
+        fig.subplots_adjust(hspace=0.6)
+
         super(MplCanvas, self).__init__(fig)
 
 class MainWindow(QMainWindow):
@@ -85,6 +87,8 @@ class MainWindow(QMainWindow):
         self.canvas.axes1.set_title(f'segment: {segment_num}  index: {line_idx}  angle: {angle:.2f}°  coord: {x_marker:.3f}, {y_marker:.3f}',
             fontsize=10, pad=15)
     
+        self.set_speed_title(0, 'm/s', True)
+
         # Plot take-off points
         takeoff_x = [self.line_x[i] for i in self.takeoff_indices]
         takeoff_y = [self.line_y[i] for i in self.takeoff_indices]
@@ -104,6 +108,22 @@ class MainWindow(QMainWindow):
         # Fallback: estimate by position
         return None
 
+    def set_speed_title(self, speed, unit="m/s", draw=True):
+        if unit == "m/s" or unit == "m.s-1":
+            unit = "m/s"
+            self.canvas.axes2.set_title(f'speed: {speed:.2f} {unit:s} - {speed * 3.6:.2f} km/h', fontsize=10, pad=15)
+        elif unit == "km/h" or unit == "km.h-1":
+            unit = "km/h"
+            self.canvas.axes2.set_title(f'speed: {speed:.2f} {unit:s} - {speed / 3.6:.2f} m/s', fontsize=10, pad=15)
+        elif unit == "mph":
+            unit = "mph"
+            self.canvas.axes2.set_title(f'speed: {speed:.2f} {unit:s} - {speed * 1.60934:.2f} km/h - {speed * 0.44704:.2f} m/s', fontsize=10, pad=15)
+        else:
+            unit = unit
+            self.canvas.axes2.set_title(f'speed: {speed:.2f} {unit:s}', fontsize=10, pad=15)
+            
+        if draw : self.canvas.draw_idle()
+    
     def on_mouse_move(self, event):
        if event.inaxes:
             if event.xdata < max(self.line_x[:]) and event.xdata > min(self.line_x[:]):
@@ -127,6 +147,8 @@ class MainWindow(QMainWindow):
                         self.marker2.set_data([x_mouse], [marker_y])
                         self.v_line2.set_xdata([x_mouse])
                         self.h_line2.set_ydata([marker_y])
+                    
+                    self.set_speed_title(marker_y, 'm/s', False)
 
                 # Find nearest index
                 idx = np.abs(np.array(self.line_x) - x_mouse).argmin()
@@ -236,6 +258,9 @@ class MainWindow(QMainWindow):
                         self.marker2.set_data([x_mouse], [marker_y])
                         self.v_line2.set_xdata([x_mouse])
                         self.h_line2.set_ydata([marker_y])
+                    
+                    self.set_speed_title(marker_y, 'm/s', False)
+
                 self.canvas.draw()                
                 # self.canvas.draw_idle()
 
