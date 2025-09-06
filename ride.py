@@ -239,17 +239,19 @@ class RidePhysics:
         return (speed.angle > (segment.angle + 10)) and (speed.value > 3.0)  # sp
     
 class RideTrajectory:
-    def __init__(self, line, initial_speed, drag, start_idx=0):
+    def __init__(self, line, initial_speed, drag, start_time=0.0):
         self.line = line
         self.drag = drag
+        self.start_time = start_time
         self.state = RideState.ROLLING
         self.states = [RideState.ROLLING]  # Store states
         self.speed = [initial_speed]  # Initial speed (SpeedVector)
         self.positions = [(line.x[0], line.y[0])]  # Initial position
         self.takeoffs = []  # Store take-off points
         self.landings = []  # Store landing points
-        self.time=[0.0]  # Store time points
+        self.time=[start_time]  # Store time points
         self.acceleration = [AccelerationVector(0.0, 0.0, set_acceleration_unit(initial_speed.unit))]  # Store acceleration vectors
+
 
     def compute_trajectory(self):
         """
@@ -261,7 +263,7 @@ class RideTrajectory:
                 self.line.x[i-1], self.line.y[i-1],
                 self.line.x[i], self.line.y[i]
             )
-       
+
             current_speed = self.speed[-1]
             current_time = self.time[-1]
             
@@ -418,6 +420,27 @@ class ReverseRideSimulation:
             print(f"ReverseRideSimulation.run_in: i={i:3d} x={self.line.x[i]:.2f}, y={self.line.y[i]:.2f}, speed={new_speed.value:.2f} {new_speed.unit}")
         return run_in_x, run_in_y, speeds
 
+    def run_out (self, start_idx, start_speed, start_time=0.0):
+        run_out_x = self.line.x[start_idx:]
+        run_out_y = self.line.y[start_idx:]
+        speeds = [None] * (len(self.line.x) - start_idx)
+        current_speed = start_speed
+        speeds[0] = start_speed
+        times = [None] * (len(self.line.x) - start_idx)
+        times[0] = start_time
+        current_time = start_time
+
+        for i in range(start_idx + 1, len(self.line.x)):
+            segment = self.line.line_segments[i-1]           
+            new_speed, new_position, delay, acceleration = RidePhysics.compute_rolling(current_speed, current_time, segment, self.drag)
+            current_speed = new_speed
+            current_time += delay
+            times[i-start_idx] = current_time
+            speeds[i-start_idx] = new_speed
+            print(f"ReverseRideSimulation.run_out: i={i:3d} x={self.line.x[i]:.2f}, y={self.line.y[i]:.2f}, speed={new_speed.value:.2f} {new_speed.unit}")
+
+        return run_out_x, run_out_y, speeds, times
+
     def run(self):
         """
         Run the reverse simulation.
@@ -437,9 +460,7 @@ class ReverseRideSimulation:
         self.run_in_x, self.run_in_y, self.run_in_speeds = self.run_in(self.takeoff_idx,self.main_jump.takeoff_speed)
 
         # Compute run-out
-        # for i in range(self.takeoff_idx, len(self.line.x)):
-        #     self.ride_y[i] = self.line.y[i]
-            # self.speeds[i] = 0.0
+        self.run_out_x, self.run_out_y, self.run_out_speeds, self.run_out_times = self.run_out(self.landing_idx, self.main_jump.landing_speed)
 
 
 if __name__ == "__main__":

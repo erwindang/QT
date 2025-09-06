@@ -39,7 +39,8 @@ def to_m_s(speed_km_h):
 
 class AccelerationVector(Vector):
     def __init__(self, acceleration, angle, unit="m/s²"):
-        super().__init__(acceleration, angle, unit)
+        super().__init__(acceleration, angle)
+        self.unit = unit
 
 def set_acceleration_unit(speed_unit):
     dict = {

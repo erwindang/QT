@@ -262,24 +262,21 @@ class MainWindow(QMainWindow):
                     
                     self.set_speed_title(marker_y, 'm/s', False)
 
+                    # --- Plot run-out ---
+                    if hasattr(self.ride, 'run_out_x') and hasattr(self.ride, 'run_out_y'):           
+                        run_out_x = getattr(self.ride, 'run_out_x', None)
+                        run_out_y = getattr(self.ride, 'run_out_y', None)
+                        if run_out_x is not None and run_out_y is not None:
+                            self.canvas.axes1.plot(run_out_x, run_out_y, color='green', linestyle='--', linewidth=1, alpha=0.4, label='Run-out Trajectory', zorder=12)
+
                 self.canvas.draw()                
                 # self.canvas.draw_idle()
 
 class ApplicationParams:
     def __init__(self):
-        self.drag = None
         self.unit = "m/s"
         self.display_unit = "km/h"
         self.resolution = 0.1
-        self.rider = None
-        self.activity = "mountain bike"
-        self.equipment = "bike"
-
-class Rider:
-    def __init__(self, weight_kg=75, height_cm=175, position="standing"):       
-        self.weight_kg = weight_kg
-        self.height_cm = height_cm
-        self.level = "expert"
 
 if __name__ == "__main__":
     my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (0.5,-15.0), (0.5,-10.0), (0.5,-6.0), (2.0,-3.0), (1.0,0.0)]
@@ -290,7 +287,6 @@ if __name__ == "__main__":
 
     my_resolution = 0.1 #meters
     params = ApplicationParams()
-    rider = Rider()
     drag = RideDrag()
     line = Line (my_segments, my_resolution) 
    
