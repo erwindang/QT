@@ -30,7 +30,13 @@ class SpeedVector(Vector):
         radians = np.radians(angle)
         projected_value = self.value * np.cos(self.radian - radians)
         return SpeedVector(projected_value, angle, self.unit)
-    
+
+def to_km_h(speed_m_s):
+    return speed_m_s * 3.6
+
+def to_m_s(speed_km_h):
+    return speed_km_h / 3.6
+
 class AccelerationVector(Vector):
     def __init__(self, acceleration, angle, unit="m/s²"):
         super().__init__(acceleration, angle, unit)

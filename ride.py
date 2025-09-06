@@ -84,6 +84,7 @@ class RidePhysics:
 
         return new_speed, new_position, new_time, acceleration
     
+    
     @staticmethod
     def rolling_speed_reversed (current_speed_value, delta_x, angle, drag, speed_unit):
         if delta_x == 0:
@@ -238,7 +239,7 @@ class RidePhysics:
         return (speed.angle > (segment.angle + 10)) and (speed.value > 3.0)  # sp
     
 class RideTrajectory:
-    def __init__(self, line, initial_speed, drag):
+    def __init__(self, line, initial_speed, drag, start_idx=0):
         self.line = line
         self.drag = drag
         self.state = RideState.ROLLING
@@ -375,7 +376,8 @@ class ReverseRideSimulation:
         self.landing_x = landing_x
         self.drag = drag
         self.speeds = np.zeros(len(line.x))  # Speed at each x-coordinate
-        self.ride_y = np.zeros(len(line.x))
+        self.landing_idx = 0
+        self.takeoff_idx = 0
 
     def find_takeoff_before_landing(self):
         for idx in reversed(self.line.takeoff_indices):
@@ -383,21 +385,37 @@ class ReverseRideSimulation:
                 return idx-1
         return 0
     
-    def find_landing_y(self):
+    def find_landing(self):
         landing_y = np.interp(self.landing_x, self.line.x[:], self.line.y[:])
-        return landing_y
+        landing_idx = np.searchsorted(self.line.x, self.landing_x)
+        landing_idx = min(max(landing_idx, 0), len(self.line.x) - 1)
+        return landing_y, landing_idx
     
+    def insert_landing(self, landing_x, landing_y):
+        # Insert landing point into the line segments
+        for i in range(1, len(self.line.x)):
+            if self.line.x[i-1] < landing_x < self.line.x[i]:
+                # Create a new segment for the landing point
+                new_segment = Segment(self.line.x[i-1], self.line.y[i-1], landing_x, landing_y)
+                # Update the existing segment to end at the landing point
+                self.line.x.insert(i, landing_x)
+                self.line.y.insert(i, landing_y)
+                self.line.segments.insert(i-1, new_segment)
+                self.line.update_segments()
+                break
+        
     def run_in (self, takeoff_idx, takeoff_speed):
         run_in_x = self.line.x[:takeoff_idx]
         run_in_y = self.line.y[:takeoff_idx]
         speeds = [None] * takeoff_idx
         current_speed = takeoff_speed
         speeds[takeoff_idx-1] = takeoff_speed
-        for i in reversed(range(1, takeoff_idx)):
+        for i in reversed(range(0, takeoff_idx)):
             segment = self.line.line_segments[i-1]           
             new_speed = RidePhysics.compute_rolling_reversed(current_speed, segment, self.drag)
             current_speed = new_speed
-            speeds[i-1] = new_speed 
+            speeds[i] = new_speed 
+            print(f"ReverseRideSimulation.run_in: i={i:3d} x={self.line.x[i]:.2f}, y={self.line.y[i]:.2f}, speed={new_speed.value:.2f} {new_speed.unit}")
         return run_in_x, run_in_y, speeds
 
     def run(self):
@@ -405,18 +423,25 @@ class ReverseRideSimulation:
         Run the reverse simulation.
         """
         # Compute jump
-        self.landing_y = self.find_landing_y()
+        self.landing_y, self.landing_idx = self.find_landing()
         self.takeoff_idx = self.find_takeoff_before_landing()
         self.main_jump = Jump(self.line.x[self.takeoff_idx], self.line.y[self.takeoff_idx], 
                          self.line.angle[self.takeoff_idx], 
                          self.landing_x, self.landing_y)
-        
+
+        print(f"ReverseRideSimulation.run: jump: {len(self.main_jump.speed)} points")
+        print(f"ReverseRideSimulation.run: takeoff idx={self.takeoff_idx}, ({self.main_jump.takeoff_x:.2f},{self.main_jump.takeoff_y:.2f}), speed={self.main_jump.takeoff_speed.value:.2f} {self.main_jump.takeoff_speed.unit}")
+        print(f"ReverseRideSimulation.run: landing idx={self.landing_idx}, ({self.main_jump.landing_x:.2f},{self.main_jump.landing_y:.2f}), speed={self.main_jump.landing_speed.value:.2f} {self.main_jump.landing_speed.unit}")
+      
         # Compute run-in
         self.run_in_x, self.run_in_y, self.run_in_speeds = self.run_in(self.takeoff_idx,self.main_jump.takeoff_speed)
 
         # Compute run-out
+        # for i in range(self.takeoff_idx, len(self.line.x)):
+        #     self.ride_y[i] = self.line.y[i]
+            # self.speeds[i] = 0.0
 
-       
+
 if __name__ == "__main__":
     # my_segments = [(1.0,-4.0), (1.0,-4.0), (1.0,-8.0), (1.0,-11.0), (1.0,-14.0), (1.0,-11.0), (1.0,-20.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-25.0), (1.0,-16.0), (1.0,-6.0), (1.0,-3.0), (1.0,0.0), (1.0,4.0), (1.0,4.0), (1.0,4.0), (1.0,11.0), (1.0,22.0), (1.0,40.0), (0.5,54.0), (1.5,0.0), (1.0,-17.0), (1.0,-21.0), (1.0,-20.0), (3.0,-6.0), (2.0,-3.0), (1.0,0.0)]
     # my_segments = [(0.5,0.0), (0.3,4.0), (0.3,6.0), (0.3,8.0), (0.3,11.0), (0.3,22.0), (0.3,40.0), (0.3,54.0), (1.0,0.0), (2.0,-25.0)]

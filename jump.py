@@ -36,6 +36,7 @@ class Jump:
                 self.y[i] = -0.5 * 9.81 * (self.x[i] - self.takeoff_x) ** 2 / (self.takeoff_speed.value * np.cos(angle_radians)) ** 2 + \
                         self.takeoff_y + (self.x[i] - self.takeoff_x) * np.tan(angle_radians)
                 self.speed[i] = self.compute_speed_at_dx(self.x[i] - self.takeoff_x)
+                print(f"Jump.compute_jump_trajectory: i={i:3d} x={self.x[i]:.2f}, y={self.y[i]:.2f}, speed={self.speed[i].value:.2f} {self.speed[i].unit}")
         
         return self.x, self.y, self.speed
     
